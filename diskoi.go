@@ -107,11 +107,11 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 	//todo proper goroutine queue
-	executor, options, path, err := e.executor(id)
+	executor, options, err := e.executor(id)
 	if err != nil {
 		return
 	}
-	_ = executor.Execute(s, i, options, path)
+	_ = executor.Execute(s, i, options)
 }
 
 func (d *Diskoi) Close() error {

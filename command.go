@@ -26,14 +26,10 @@ func NewCommandGroup(name string, description string) *CommandGroup {
 func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	executor *Executor,
 	options []*discordgo.ApplicationCommandInteractionDataOption,
-	path []string,
 	err error,
 ) {
 	c.m.RLock()
 	defer c.m.RUnlock()
-	path = make([]string, 0, 3)
-	path = append(path, d.Name)
-
 	//initialize default fallbacks
 	//target is the name of a subcommand or a group
 	target := d.Options[0]
@@ -43,7 +39,6 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	//find if there's a group named as such
 	grp, _ := c.findGroup(target.Name)
 	if grp != nil {
-		path = append(path, target.Name)
 		//if so we unwrap options to get the actual name
 		target = target.Options[0]
 		//and also overwrite the default subcommand to said group
@@ -54,10 +49,9 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	defer sg.m.RUnlock()
 	sub, _ := sg.findSub(target.Name)
 	if sub != nil {
-		path = append(path, target.Name)
-		return sub, target.Options, path, nil
+		return sub, target.Options, nil
 	}
-	return nil, nil, nil, MissingSubcommandError{}
+	return nil, nil, MissingSubcommandError{}
 }
 
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand {

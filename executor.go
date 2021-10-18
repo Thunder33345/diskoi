@@ -11,7 +11,6 @@ type executable interface {
 	executor(d discordgo.ApplicationCommandInteractionData) (
 		executor *Executor,
 		options []*discordgo.ApplicationCommandInteractionDataOption,
-		path []string,
 		err error,
 	)
 	applicationCommand() *discordgo.ApplicationCommand
@@ -113,19 +112,16 @@ func (e *Executor) SetChannelTypes(field string, channels []discordgo.ChannelTyp
 func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
 	executor *Executor,
 	options []*discordgo.ApplicationCommandInteractionDataOption,
-	path []string,
 	err error,
 ) {
-	return e, d.Options, []string{d.Name}, nil
+	return e, d.Options, nil
 }
 
 func (e *Executor) Execute(
 	s *discordgo.Session,
 	i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption,
-	path []string,
 ) error {
-	fmt.Printf("Executed via path: %v\n", path) //todo remove
 	f := reflect.ValueOf(e.fn)
 
 	v := generateExecutorValue(s, o, i.GuildID, e)
