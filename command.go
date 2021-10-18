@@ -9,7 +9,10 @@ import (
 func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	d := i.Data.(discordgo.ApplicationCommandInteractionData)
+	d, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
+	if ok {
+		//todo unguarded type assert
+	}
 	target := d.Options[0]
 
 	grp, in := c.findGroup(target.Name)
@@ -61,8 +64,9 @@ type CommandGroup struct {
 
 func NewCommandGroup(name string, description string) *CommandGroup {
 	return &CommandGroup{
-		name:        name,
-		description: description,
+		name:            name,
+		description:     description,
+		SubcommandGroup: &SubcommandGroup{},
 	}
 }
 
