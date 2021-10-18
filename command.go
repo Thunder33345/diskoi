@@ -22,7 +22,7 @@ func (c *CommandGroupHolder) Execute(s *discordgo.Session, i *discordgo.Interact
 	grp, in := c.g.findGroup(target.Name)
 	if in >= 0 {
 		target = target.Options[0]
-		sub, _ := grp.Command.findSub(target.Name)
+		sub, _ := grp.findSub(target.Name)
 		if sub != nil {
 			f := reflect.ValueOf(sub.fn)
 			f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub)})
@@ -59,8 +59,8 @@ func (c *CommandGroupHolder) applicationCommand() *discordgo.ApplicationCommand 
 }
 
 type CommandGroup struct {
-	subcommandGroups []SubcommandGroupHolder
-	SubcommandGroup
+	subcommandGroups []*SubcommandGroup
+	*SubcommandGroup
 	m sync.Mutex
 }
 
@@ -68,30 +68,25 @@ func NewCommandGroup() *CommandGroup {
 	return &CommandGroup{}
 }
 
-func (c *CommandGroup) FindSubcommandGroup(name string) (SubcommandGroupHolder, bool) {
+func (c *CommandGroup) FindSubcommandGroup(name string) (*SubcommandGroup, bool) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	h, i := c.findGroup(name)
 	if i < 0 {
-		return SubcommandGroupHolder{}, false
+		return nil, false
 	}
 	return h, true
 }
 
-func (c *CommandGroup) AddSubcommandGroup(name string, description string, group *SubcommandGroup) {
+func (c *CommandGroup) AddSubcommandGroup(group *SubcommandGroup) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	_, i := c.findGroup(name)
-	h := SubcommandGroupHolder{
-		Name:        name,
-		Description: description,
-		Command:     group,
-	}
+	_, i := c.findGroup(group.name)
 	if i < 0 {
-		c.subcommandGroups = append(c.subcommandGroups, h)
+		c.subcommandGroups = append(c.subcommandGroups, group)
 		return
 	}
-	c.subcommandGroups[i] = h
+	c.subcommandGroups[i] = group
 }
 
 func (c *CommandGroup) RemoveSubcommandGroup(name string) {
@@ -104,37 +99,27 @@ func (c *CommandGroup) RemoveSubcommandGroup(name string) {
 	c.subcommandGroups = append(c.subcommandGroups[:i], c.subcommandGroups[i+1:]...)
 }
 
-func (c *CommandGroup) findGroup(name string) (SubcommandGroupHolder, int) {
+func (c *CommandGroup) findGroup(name string) (*SubcommandGroup, int) {
 	for i, h := range c.subcommandGroups {
-		if h.Name == name {
+		if h.name == name {
 			return h, i
 		}
 	}
-	return SubcommandGroupHolder{}, -1
-}
-
-type SubcommandGroupHolder struct {
-	Name        string
-	Description string
-	Command     *SubcommandGroup
-}
-
-func (c *SubcommandGroupHolder) applicationCommandOption() *discordgo.ApplicationCommandOption {
-	return &discordgo.ApplicationCommandOption{
-		Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
-		Name:        c.Name,
-		Description: c.Description,
-		Options:     c.Command.applicationCommandOptions(),
-	}
+	return nil, -1
 }
 
 type SubcommandGroup struct {
-	h []*Executor
-	m sync.Mutex
+	name        string
+	description string
+	h           []*Executor
+	m           sync.Mutex
 }
 
-func NewSubcommandGroup() *SubcommandGroup {
-	return &SubcommandGroup{}
+func NewSubcommandGroup(name string, description string) *SubcommandGroup {
+	return &SubcommandGroup{
+		name:        name,
+		description: description,
+	}
 }
 
 func (c *SubcommandGroup) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
@@ -151,6 +136,16 @@ func (c *SubcommandGroup) applicationCommandOptions() []*discordgo.ApplicationCo
 	}
 	return o
 }
+
+func (c *SubcommandGroup) applicationCommandOption() *discordgo.ApplicationCommandOption {
+	return &discordgo.ApplicationCommandOption{
+		Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
+		Name:        c.name,
+		Description: c.description,
+		Options:     c.applicationCommandOptions(),
+	}
+}
+
 func (c *SubcommandGroup) FindSubcommand(name string) (*Executor, bool) {
 	c.m.Lock()
 	defer c.m.Unlock()
