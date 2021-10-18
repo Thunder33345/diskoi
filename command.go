@@ -60,7 +60,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	return nil, nil, nil, MissingSubcommandError{}
 }
 
-func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand { //todo test
+func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand {
 	c.m.RLock()
 	defer c.m.RUnlock()
 	a := &discordgo.ApplicationCommand{
