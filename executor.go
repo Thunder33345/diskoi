@@ -72,23 +72,6 @@ func (e *Executor) SetChoices(field string, choices []*discordgo.ApplicationComm
 	panic(fmt.Sprintf("Failed to set choices: error finding field '%s' on %s(%s)", field, r.Name(), r.Kind()))
 }
 
-func (e *Executor) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
-	e.m.Lock()
-	defer e.m.Unlock()
-	o := make([]*discordgo.ApplicationCommandOption, 0, len(e.bindings))
-	for _, b := range e.bindings {
-		o = append(o, &discordgo.ApplicationCommandOption{
-			Type:         b.Type,
-			Name:         b.Name,
-			Description:  b.Description,
-			Required:     b.Required,
-			Choices:      b.Choices,
-			ChannelTypes: b.ChannelTypes,
-		})
-	}
-	return o
-}
-
 func (e *Executor) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	f := reflect.ValueOf(e.fn)
 	d, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
@@ -108,4 +91,21 @@ func (e *Executor) applicationCommand() *discordgo.ApplicationCommand {
 		Description: e.description,
 		Options:     e.applicationCommandOptions(),
 	}
+}
+
+func (e *Executor) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
+	e.m.Lock()
+	defer e.m.Unlock()
+	o := make([]*discordgo.ApplicationCommandOption, 0, len(e.bindings))
+	for _, b := range e.bindings {
+		o = append(o, &discordgo.ApplicationCommandOption{
+			Type:         b.Type,
+			Name:         b.Name,
+			Description:  b.Description,
+			Required:     b.Required,
+			Choices:      b.Choices,
+			ChannelTypes: b.ChannelTypes,
+		})
+	}
+	return o
 }

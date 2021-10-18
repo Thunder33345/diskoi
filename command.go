@@ -6,7 +6,6 @@ import (
 	"sync"
 )
 
-
 func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	c.m.Lock()
 	defer c.m.Unlock()
@@ -191,4 +190,8 @@ type applicationCommandLister interface {
 
 type applicationCommandOptionsLister interface {
 	applicationCommandOptions() []*discordgo.ApplicationCommandOption
+}
+
+type applicationCommandOptionLister interface {
+	applicationCommandOption() *discordgo.ApplicationCommandOption
 }
