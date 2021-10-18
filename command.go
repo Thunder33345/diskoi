@@ -6,6 +6,22 @@ import (
 	"sync"
 )
 
+type CommandGroup struct {
+	name             string
+	description      string
+	subcommandGroups []*SubcommandGroup
+	*SubcommandGroup
+	m sync.Mutex
+}
+
+func NewCommandGroup(name string, description string) *CommandGroup {
+	return &CommandGroup{
+		name:            name,
+		description:     description,
+		SubcommandGroup: &SubcommandGroup{},
+	}
+}
+
 func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	c.m.Lock()
 	defer c.m.Unlock()
@@ -52,22 +68,6 @@ func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand { //to
 	}
 
 	return a
-}
-
-type CommandGroup struct {
-	name             string
-	description      string
-	subcommandGroups []*SubcommandGroup
-	*SubcommandGroup
-	m sync.Mutex
-}
-
-func NewCommandGroup(name string, description string) *CommandGroup {
-	return &CommandGroup{
-		name:            name,
-		description:     description,
-		SubcommandGroup: &SubcommandGroup{},
-	}
 }
 
 func (c *CommandGroup) FindSubcommandGroup(name string) (*SubcommandGroup, bool) {
