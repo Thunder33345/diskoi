@@ -11,9 +11,9 @@ func (e InteractionDataTypeError) Error() string {
 		" but \"" + e.ty.String() + "\" given"
 }
 
-type UnreachableError struct {
+type MissingSubcommandError struct {
 }
 
-func (e UnreachableError) Error() string {
-	return "Unreachable condition reached: possible api command groups de-sync?"
+func (e MissingSubcommandError) Error() string {
+	return "Subcommand not found: possible api command groups de-sync?"
 }

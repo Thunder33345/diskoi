@@ -49,7 +49,7 @@ func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCre
 		f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub)})
 		return nil
 	}
-	return UnreachableError{}
+	return nil, nil, nil, MissingSubcommandError{}
 }
 
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand { //todo test
