@@ -59,6 +59,14 @@ func NewExecutor(name string, description string, fn interface{}) *Executor {
 	return &e
 }
 
+func (e *Executor) Name() string {
+	return e.name
+}
+
+func (e *Executor) Description() string {
+	return e.description
+}
+
 func (e *Executor) As(name string, description string) *Executor {
 	return &Executor{
 		name:        name,
