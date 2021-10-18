@@ -8,7 +8,7 @@ import (
 )
 
 type Executable interface {
-	Execute(s *discordgo.Session, i *discordgo.InteractionCreate)
+	Execute(s *discordgo.Session, i *discordgo.InteractionCreate) error
 	applicationCommand() *discordgo.ApplicationCommand
 }
 
@@ -25,6 +25,8 @@ type Executor struct {
 	bindings []*commandBinding
 	m        sync.Mutex
 }
+
+var _ Executable = (*Executor)(nil)
 
 func NewExecutor(name string, description string, fn interface{}) *Executor {
 	e := Executor{
@@ -90,14 +92,15 @@ func (e *Executor) SetChoices(field string, choices []*discordgo.ApplicationComm
 	panic(fmt.Sprintf("Failed to set choices: error finding field '%s' on %s(%s)", field, r.Name(), r.Kind()))
 }
 
-func (e *Executor) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (e *Executor) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) error {
 	f := reflect.ValueOf(e.fn)
 	d, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
-	if ok {
-		//todo unguarded type assert
+	if i.Data.Type() != discordgo.InteractionApplicationCommand || !ok {
+		return InteractionDataTypeError{ty: i.Data.Type()}
 	}
 	v := generateExecutorValue(s, d.Options, i.GuildID, e)
 	f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), v})
+	return nil
 }
 
 func (e *Executor) applicationCommand() *discordgo.ApplicationCommand {

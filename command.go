@@ -14,6 +14,8 @@ type CommandGroup struct {
 	m sync.RWMutex
 }
 
+var _ Executable = (*CommandGroup)(nil)
+
 func NewCommandGroup(name string, description string) *CommandGroup {
 	return &CommandGroup{
 		name:            name,
@@ -22,12 +24,13 @@ func NewCommandGroup(name string, description string) *CommandGroup {
 	}
 }
 
-func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+	//todo refactor into "get executor"
 	c.m.RLock()
 	defer c.m.RUnlock()
 	d, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
-	if ok {
-		//todo unguarded type assert
+	if i.Data.Type() != discordgo.InteractionApplicationCommand || !ok {
+		return InteractionDataTypeError{ty: i.Data.Type()}
 	}
 	target := d.Options[0]
 	sg := c.SubcommandGroup
@@ -44,10 +47,9 @@ func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCre
 	if sub != nil {
 		f := reflect.ValueOf(sub.fn)
 		f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub)})
-		return
+		return nil
 	}
-
-	panic("TODO: handle impossible case") //todo
+	return UnreachableError{}
 }
 
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand { //todo test
