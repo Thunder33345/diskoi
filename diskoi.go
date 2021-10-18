@@ -84,21 +84,13 @@ func (d *Diskoi) AddGuildCommand(guild string, exec *Executor) {
 	d.commandsGuild[guild] = append(d.commands, exec)
 }
 
-func (d *Diskoi) AddCommandGroup(guild string, name string, description string, cg *CommandGroup) {
+func (d *Diskoi) AddCommandGroup(guild string, cg *CommandGroup) {
 	d.m.Lock()
 	defer d.m.Unlock()
 	if guild == "" {
-		d.commands = append(d.commands, &CommandGroupHolder{
-			Name:        name,
-			Description: description,
-			g:           cg,
-		})
+		d.commands = append(d.commands, cg)
 	} else {
-		d.commandsGuild[guild] = append(d.commands, &CommandGroupHolder{
-			Name:        name,
-			Description: description,
-			g:           cg,
-		})
+		d.commandsGuild[guild] = append(d.commands, cg)
 	}
 }
 func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {

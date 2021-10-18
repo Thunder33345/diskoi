@@ -6,20 +6,14 @@ import (
 	"sync"
 )
 
-type CommandGroupHolder struct { //todo consider viability of not exporting holders
-	Name        string
-	Description string
-	g           *CommandGroup
-	m           sync.Mutex
-}
 
-func (c *CommandGroupHolder) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	d := i.Data.(discordgo.ApplicationCommandInteractionData)
 	target := d.Options[0]
 
-	grp, in := c.g.findGroup(target.Name)
+	grp, in := c.findGroup(target.Name)
 	if in >= 0 {
 		target = target.Options[0]
 		sub, _ := grp.findSub(target.Name)
@@ -30,7 +24,7 @@ func (c *CommandGroupHolder) Execute(s *discordgo.Session, i *discordgo.Interact
 		}
 	}
 
-	sub, _ := c.g.SubcommandGroup.findSub(target.Name)
+	sub, _ := c.SubcommandGroup.findSub(target.Name)
 	if sub != nil {
 		f := reflect.ValueOf(sub.fn)
 		f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub)})
@@ -40,18 +34,18 @@ func (c *CommandGroupHolder) Execute(s *discordgo.Session, i *discordgo.Interact
 	panic("TODO: handle impossible case") //todo
 }
 
-func (c *CommandGroupHolder) applicationCommand() *discordgo.ApplicationCommand { //todo test
+func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand { //todo test
 	c.m.Lock()
 	defer c.m.Unlock()
 	a := &discordgo.ApplicationCommand{
 		Type:        discordgo.ChatApplicationCommand,
-		Name:        c.Name,
-		Description: c.Description,
+		Name:        c.name,
+		Description: c.description,
 		Options:     []*discordgo.ApplicationCommandOption{},
 	}
-	a.Options = append(a.Options, c.g.SubcommandGroup.applicationCommandOptions()...)
+	a.Options = append(a.Options, c.SubcommandGroup.applicationCommandOptions()...)
 
-	for _, s := range c.g.subcommandGroups {
+	for _, s := range c.subcommandGroups {
 		a.Options = append(a.Options, s.applicationCommandOption())
 	}
 
@@ -59,13 +53,18 @@ func (c *CommandGroupHolder) applicationCommand() *discordgo.ApplicationCommand 
 }
 
 type CommandGroup struct {
+	name             string
+	description      string
 	subcommandGroups []*SubcommandGroup
 	*SubcommandGroup
 	m sync.Mutex
 }
 
-func NewCommandGroup() *CommandGroup {
-	return &CommandGroup{}
+func NewCommandGroup(name string, description string) *CommandGroup {
+	return &CommandGroup{
+		name:        name,
+		description: description,
+	}
 }
 
 func (c *CommandGroup) FindSubcommandGroup(name string) (*SubcommandGroup, bool) {
