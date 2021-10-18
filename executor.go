@@ -59,6 +59,16 @@ func NewExecutor(name string, description string, fn interface{}) *Executor {
 	return &e
 }
 
+func (e *Executor) As(name string, description string) *Executor {
+	return &Executor{
+		name:        name,
+		description: description,
+		fn:          e.fn,
+		ty:          e.ty,
+		bindings:    e.bindings,
+	}
+}
+
 func (e *Executor) SetChoices(field string, choices []*discordgo.ApplicationCommandOptionChoice) {
 	e.m.Lock()
 	defer e.m.Unlock()
@@ -94,8 +104,6 @@ func (e *Executor) applicationCommand() *discordgo.ApplicationCommand {
 }
 
 func (e *Executor) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
-	e.m.Lock()
-	defer e.m.Unlock()
 	o := make([]*discordgo.ApplicationCommandOption, 0, len(e.bindings))
 	for _, b := range e.bindings {
 		o = append(o, &discordgo.ApplicationCommandOption{
