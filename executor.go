@@ -7,8 +7,13 @@ import (
 	"sync"
 )
 
-type Executable interface {
-	Execute(s *discordgo.Session, i *discordgo.InteractionCreate) error
+type executable interface {
+	executor(d discordgo.ApplicationCommandInteractionData) (
+		executor *Executor,
+		options []*discordgo.ApplicationCommandInteractionDataOption,
+		path []string,
+		err error,
+	)
 	applicationCommand() *discordgo.ApplicationCommand
 }
 
@@ -26,7 +31,7 @@ type Executor struct {
 	m        sync.Mutex
 }
 
-var _ Executable = (*Executor)(nil)
+var _ executable = (*Executor)(nil)
 
 func NewExecutor(name string, description string, fn interface{}) *Executor {
 	e := Executor{
@@ -92,13 +97,25 @@ func (e *Executor) SetChoices(field string, choices []*discordgo.ApplicationComm
 	panic(fmt.Sprintf("Failed to set choices: error finding field '%s' on %s(%s)", field, r.Name(), r.Kind()))
 }
 
-func (e *Executor) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) error {
+func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
+	executor *Executor,
+	options []*discordgo.ApplicationCommandInteractionDataOption,
+	path []string,
+	err error,
+) {
+	return e, d.Options, []string{d.Name}, nil
+}
+
+func (e *Executor) Execute(
+	s *discordgo.Session,
+	i *discordgo.InteractionCreate,
+	o []*discordgo.ApplicationCommandInteractionDataOption,
+	path []string,
+) error {
+	fmt.Printf("Executed via path: %v\n", path) //todo remove
 	f := reflect.ValueOf(e.fn)
-	d, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
-	if i.Data.Type() != discordgo.InteractionApplicationCommand || !ok {
-		return InteractionDataTypeError{ty: i.Data.Type()}
-	}
-	v := generateExecutorValue(s, d.Options, i.GuildID, e)
+
+	v := generateExecutorValue(s, o, i.GuildID, e)
 	f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), v})
 	return nil
 }

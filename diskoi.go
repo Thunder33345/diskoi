@@ -14,16 +14,16 @@ type Diskoi struct {
 	//todo config to set panicness
 	s                 *discordgo.Session
 	remover           func()
-	commands          []Executable
-	commandsGuild     map[string][]Executable
-	registeredCommand map[string]Executable
+	commands          []executable
+	commandsGuild     map[string][]executable
+	registeredCommand map[string]executable
 	m                 sync.Mutex
 }
 
 func NewDiskoi() *Diskoi {
 	return &Diskoi{
-		commandsGuild:     map[string][]Executable{},
-		registeredCommand: map[string]Executable{},
+		commandsGuild:     map[string][]executable{},
+		registeredCommand: map[string]executable{},
 		m:                 sync.Mutex{},
 	}
 }
@@ -94,16 +94,24 @@ func (d *Diskoi) AddCommandGroup(guild string, cg *CommandGroup) {
 	}
 }
 func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.Type != discordgo.InteractionApplicationCommand {
+	if i.Type != discordgo.InteractionApplicationCommand ||
+		i.Data.Type() != discordgo.InteractionApplicationCommand {
 		return
 	}
-	id := i.Data.(discordgo.ApplicationCommandInteractionData)
+	id, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
+	if !ok {
+		return
+	}
 	e, ok := d.registeredCommand[id.ID]
 	if !ok {
 		return
 	}
 	//todo proper goroutine queue
-	_ = e.Execute(s, i)
+	executor, options, path, err := e.executor(id)
+	if err != nil {
+		return
+	}
+	_ = executor.Execute(s, i, options, path)
 }
 
 func (d *Diskoi) Close() error {

@@ -2,7 +2,6 @@ package diskoi
 
 import (
 	"github.com/bwmarrin/discordgo"
-	"reflect"
 	"sync"
 )
 
@@ -14,7 +13,7 @@ type CommandGroup struct {
 	m sync.RWMutex
 }
 
-var _ Executable = (*CommandGroup)(nil)
+var _ executable = (*CommandGroup)(nil)
 
 func NewCommandGroup(name string, description string) *CommandGroup {
 	return &CommandGroup{
@@ -24,20 +23,30 @@ func NewCommandGroup(name string, description string) *CommandGroup {
 	}
 }
 
-func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) error {
-	//todo refactor into "get executor"
+func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
+	executor *Executor,
+	options []*discordgo.ApplicationCommandInteractionDataOption,
+	path []string,
+	err error,
+) {
 	c.m.RLock()
 	defer c.m.RUnlock()
-	d, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
-	if i.Data.Type() != discordgo.InteractionApplicationCommand || !ok {
-		return InteractionDataTypeError{ty: i.Data.Type()}
-	}
+	path = make([]string, 0, 3)
+	path = append(path, d.Name)
+
+	//initialize default fallbacks
+	//target is the name of a subcommand or a group
 	target := d.Options[0]
+	//default embedded subcommand group to search
 	sg := c.SubcommandGroup
 
-	grp, in := c.findGroup(target.Name)
-	if in >= 0 {
+	//find if there's a group named as such
+	grp, _ := c.findGroup(target.Name)
+	if grp != nil {
+		path = append(path, target.Name)
+		//if so we unwrap options to get the actual name
 		target = target.Options[0]
+		//and also overwrite the default subcommand to said group
 		sg = grp
 	}
 
@@ -45,9 +54,8 @@ func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCre
 	defer sg.m.RUnlock()
 	sub, _ := sg.findSub(target.Name)
 	if sub != nil {
-		f := reflect.ValueOf(sub.fn)
-		f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub)})
-		return nil
+		path = append(path, target.Name)
+		return sub, target.Options, path, nil
 	}
 	return nil, nil, nil, MissingSubcommandError{}
 }
