@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-var magicTag = "diskoi"
+const magicTag = "diskoi"
 
 type Diskoi struct {
 	//todo better registration and unregistration and removal func
@@ -81,7 +81,7 @@ func (d *Diskoi) AddCommand(exec *Executor) {
 func (d *Diskoi) AddGuildCommand(guild string, exec *Executor) {
 	d.m.Lock()
 	defer d.m.Unlock()
-	d.commandsGuild[guild] = append(d.commands, exec)
+	d.commandsGuild[guild] = append(d.commandsGuild[guild], exec)
 }
 
 func (d *Diskoi) AddCommandGroup(guild string, cg *CommandGroup) {
@@ -90,7 +90,7 @@ func (d *Diskoi) AddCommandGroup(guild string, cg *CommandGroup) {
 	if guild == "" {
 		d.commands = append(d.commands, cg)
 	} else {
-		d.commandsGuild[guild] = append(d.commands, cg)
+		d.commandsGuild[guild] = append(d.commandsGuild[guild], cg)
 	}
 }
 func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
