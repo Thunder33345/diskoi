@@ -30,22 +30,17 @@ func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCre
 		//todo unguarded type assert
 	}
 	target := d.Options[0]
+	sg := c.SubcommandGroup
 
 	grp, in := c.findGroup(target.Name)
 	if in >= 0 {
 		target = target.Options[0]
-		grp.m.RLock()
-		defer grp.m.RUnlock()
-		sub, _ := grp.findSub(target.Name)
-		if sub != nil {
-			f := reflect.ValueOf(sub.fn)
-			f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub)})
-			return
-		}
+		sg = grp
 	}
-	c.SubcommandGroup.m.RLock()
-	defer c.SubcommandGroup.m.RUnlock()
-	sub, _ := c.SubcommandGroup.findSub(target.Name)
+
+	sg.m.RLock()
+	defer sg.m.RUnlock()
+	sub, _ := sg.findSub(target.Name)
 	if sub != nil {
 		f := reflect.ValueOf(sub.fn)
 		f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub)})
