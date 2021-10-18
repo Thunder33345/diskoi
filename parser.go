@@ -1,6 +1,7 @@
 package diskoi
 
 import (
+	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"reflect"
@@ -95,9 +96,9 @@ func generateExecutorValue(s *discordgo.Session, options []*discordgo.Applicatio
 	return val
 }
 
-func generateBindings(t reflect.Type) []*commandBinding {//todo do something about blank description
+func generateBindings(t reflect.Type) ([]*commandBinding, error) {
 	if t.Kind() != reflect.Struct {
-		panic(fmt.Sprintf("given interface %s(%s) is not type of struct", t.Name(), t.Kind().String()))
+		return nil, errors.New(fmt.Sprintf("given type %s(%s) is not type of struct", t.Name(), t.Kind().String()))
 	}
 
 	binds := make([]*commandBinding, 0, t.NumField())
@@ -132,12 +133,16 @@ func generateBindings(t reflect.Type) []*commandBinding {//todo do something abo
 					for _, ct := range cts {
 						ci, e := strconv.Atoi(ct)
 						if e != nil {
-							panic(fmt.Sprintf("non int convertable given for channelTypes on %s for %s", f.Name, t.Name()))
+							return nil, errors.New(fmt.Sprintf("non int convertable given for channelTypes on %s for %s", f.Name, t.Name()))
 						}
 						bind.ChannelTypes = append(bind.ChannelTypes, discordgo.ChannelType(ci))
 					}
 				}
 			}
+		}
+
+		if bind.Description == "" {
+			return nil, errors.New(fmt.Sprintf("Description of %s.%s cant be empty", t.Name(), bind.FieldName))
 		}
 
 		kind := f.Type.Kind()
@@ -183,5 +188,5 @@ func generateBindings(t reflect.Type) []*commandBinding {//todo do something abo
 		}
 	}
 	binds = append(req, opt...)
-	return binds
+	return binds, nil
 }

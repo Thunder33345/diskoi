@@ -1,6 +1,7 @@
 package diskoi
 
 import (
+	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"reflect"
@@ -32,7 +33,7 @@ type Executor struct {
 
 var _ executable = (*Executor)(nil)
 
-func NewExecutor(name string, description string, fn interface{}) *Executor {
+func NewExecutor(name string, description string, fn interface{}) (*Executor, error) {
 	e := Executor{
 		name:        name,
 		description: description,
@@ -41,28 +42,32 @@ func NewExecutor(name string, description string, fn interface{}) *Executor {
 
 	valOf := reflect.ValueOf(fn)
 	if valOf.Kind() != reflect.Func {
-		panic(fmt.Sprintf("given interface %s(%s) is not type of func", valOf.Type().Name(), valOf.Kind().String()))
+		return nil, errors.New(fmt.Sprintf("given interface %s(%s) is not type of func", valOf.Type().Name(), valOf.Kind().String()))
 	}
 
 	if valOf.Type().NumOut() != 0 {
-		panic(fmt.Sprintf("given function(%s) has %d outputs, expecting 0", signature(fn), valOf.Type().NumOut()))
+		return nil, errors.New(fmt.Sprintf("given function(%s) has %d outputs, expecting 0", signature(fn), valOf.Type().NumOut()))
 	}
 
 	if valOf.Type().NumIn() != 3 {
-		panic(fmt.Sprintf("given function(%s) has %d inputs, expecting 3", signature(fn), valOf.Type().NumIn()))
+		return nil, errors.New(fmt.Sprintf("given function(%s) has %d inputs, expecting 3", signature(fn), valOf.Type().NumIn()))
 	}
 
 	if valOf.Type().In(0) != reflect.TypeOf((*discordgo.Session)(nil)) ||
 		valOf.Type().In(1) != reflect.TypeOf((*discordgo.InteractionCreate)(nil)) {
-		panic(fmt.Sprintf("given function(%s) has incorrect type, expecting func(s *discordgo.Session, i *discordgo.InteractionCreate, ...)", signature(fn)))
+		return nil, errors.New(fmt.Sprintf("given function(%s) has incorrect type, expecting func(s *discordgo.Session, i *discordgo.InteractionCreate, ...)", signature(fn)))
 	}
 
 	if valOf.Type().In(2).Kind() != reflect.Struct {
-		panic(fmt.Sprintf("given function(%s) has incorrect type, expecting the 3rd type to be struct not %s", signature(fn), valOf.Type().In(2).Kind().String()))
+		return nil, errors.New(fmt.Sprintf("given function(%s) has incorrect type, expecting the 3rd type to be struct not %s", signature(fn), valOf.Type().In(2).Kind().String()))
 	}
 	e.ty = valOf.Type().In(2)
-	e.bindings = generateBindings(e.ty)
-	return &e
+	var err error
+	e.bindings, err = generateBindings(e.ty)
+	if err != nil {
+		return nil, err
+	}
+	return &e, nil
 }
 
 func (e *Executor) Name() string {
