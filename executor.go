@@ -97,6 +97,19 @@ func (e *Executor) SetChoices(field string, choices []*discordgo.ApplicationComm
 	panic(fmt.Sprintf("Failed to set choices: error finding field '%s' on %s(%s)", field, r.Name(), r.Kind()))
 }
 
+func (e *Executor) SetChannelTypes(field string, channels []discordgo.ChannelType) {
+	e.m.Lock()
+	defer e.m.Unlock()
+	for _, b := range e.bindings {
+		if b.FieldName == field {
+			b.ChannelTypes = channels
+			return
+		}
+	}
+	r := reflect.TypeOf(e.ty)
+	panic(fmt.Sprintf("Failed to set choices: error finding field '%s' on %s(%s)", field, r.Name(), r.Kind()))
+}
+
 func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
 	executor *Executor,
 	options []*discordgo.ApplicationCommandInteractionDataOption,
