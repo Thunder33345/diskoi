@@ -9,7 +9,7 @@ type SubcommandGroup struct {
 	name        string
 	description string
 	h           []*Executor
-	m           sync.Mutex
+	m           sync.RWMutex
 }
 
 func NewSubcommandGroup(name string, description string) *SubcommandGroup {
@@ -20,8 +20,8 @@ func NewSubcommandGroup(name string, description string) *SubcommandGroup {
 }
 
 func (c *SubcommandGroup) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
-	c.m.Lock()
-	defer c.m.Unlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	o := make([]*discordgo.ApplicationCommandOption, 0, len(c.h))
 	for _, e := range c.h {
 		o = append(o, &discordgo.ApplicationCommandOption{
@@ -35,6 +35,8 @@ func (c *SubcommandGroup) applicationCommandOptions() []*discordgo.ApplicationCo
 }
 
 func (c *SubcommandGroup) applicationCommandOption() *discordgo.ApplicationCommandOption {
+	c.m.RLock()
+	defer c.m.RUnlock()
 	return &discordgo.ApplicationCommandOption{
 		Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
 		Name:        c.name,
@@ -44,8 +46,8 @@ func (c *SubcommandGroup) applicationCommandOption() *discordgo.ApplicationComma
 }
 
 func (c *SubcommandGroup) FindSubcommand(name string) (*Executor, bool) {
-	c.m.Lock()
-	defer c.m.Unlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	h, i := c.findSub(name)
 	if i < 0 {
 		return nil, false

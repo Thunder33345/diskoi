@@ -11,7 +11,7 @@ type CommandGroup struct {
 	description      string
 	subcommandGroups []*SubcommandGroup
 	*SubcommandGroup
-	m sync.Mutex
+	m sync.RWMutex
 }
 
 func NewCommandGroup(name string, description string) *CommandGroup {
@@ -23,8 +23,8 @@ func NewCommandGroup(name string, description string) *CommandGroup {
 }
 
 func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	c.m.Lock()
-	defer c.m.Unlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	d, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
 	if ok {
 		//todo unguarded type assert
@@ -34,6 +34,8 @@ func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCre
 	grp, in := c.findGroup(target.Name)
 	if in >= 0 {
 		target = target.Options[0]
+		grp.m.RLock()
+		defer grp.m.RUnlock()
 		sub, _ := grp.findSub(target.Name)
 		if sub != nil {
 			f := reflect.ValueOf(sub.fn)
@@ -41,7 +43,8 @@ func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCre
 			return
 		}
 	}
-
+	c.SubcommandGroup.m.RLock()
+	defer c.SubcommandGroup.m.RUnlock()
 	sub, _ := c.SubcommandGroup.findSub(target.Name)
 	if sub != nil {
 		f := reflect.ValueOf(sub.fn)
@@ -53,8 +56,8 @@ func (c *CommandGroup) Execute(s *discordgo.Session, i *discordgo.InteractionCre
 }
 
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand { //todo test
-	c.m.Lock()
-	defer c.m.Unlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	a := &discordgo.ApplicationCommand{
 		Type:        discordgo.ChatApplicationCommand,
 		Name:        c.name,
@@ -66,13 +69,12 @@ func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand { //to
 	for _, s := range c.subcommandGroups {
 		a.Options = append(a.Options, s.applicationCommandOption())
 	}
-
 	return a
 }
 
 func (c *CommandGroup) FindSubcommandGroup(name string) (*SubcommandGroup, bool) {
-	c.m.Lock()
-	defer c.m.Unlock()
+	c.m.RLock()
+	defer c.m.RUnlock()
 	h, i := c.findGroup(name)
 	if i < 0 {
 		return nil, false
