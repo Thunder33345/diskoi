@@ -72,24 +72,16 @@ func (d *Diskoi) UnregisterCommands() error {
 	return nil
 }
 
-func (d *Diskoi) AddCommand(name string, description string, exec *Executor) {
+func (d *Diskoi) AddCommand(exec *Executor) {
 	d.m.Lock()
 	defer d.m.Unlock()
-	d.commands = append(d.commands, &ExecutorHolder{
-		Name:        name,
-		Description: description,
-		Executor:    exec,
-	})
+	d.commands = append(d.commands, exec)
 }
 
-func (d *Diskoi) AddGuildCommand(guild string, name string, description string, exec *Executor) {
+func (d *Diskoi) AddGuildCommand(guild string, exec *Executor) {
 	d.m.Lock()
 	defer d.m.Unlock()
-	d.commandsGuild[guild] = append(d.commands, &ExecutorHolder{
-		Name:        name,
-		Description: description,
-		Executor:    exec,
-	})
+	d.commandsGuild[guild] = append(d.commands, exec)
 }
 
 func (d *Diskoi) AddCommandGroup(guild string, name string, description string, cg *CommandGroup) {

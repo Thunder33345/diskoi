@@ -24,16 +24,16 @@ func (c *CommandGroupHolder) Execute(s *discordgo.Session, i *discordgo.Interact
 		target = target.Options[0]
 		sub, _ := grp.Command.findSub(target.Name)
 		if sub != nil {
-			f := reflect.ValueOf(sub.Executor.fn)
-			f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub.Executor)})
+			f := reflect.ValueOf(sub.fn)
+			f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub)})
 			return
 		}
 	}
 
 	sub, _ := c.g.SubcommandGroup.findSub(target.Name)
 	if sub != nil {
-		f := reflect.ValueOf(sub.Executor.fn)
-		f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub.Executor)})
+		f := reflect.ValueOf(sub.fn)
+		f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), generateExecutorValue(s, target.Options, i.GuildID, sub)})
 		return
 	}
 
@@ -129,7 +129,7 @@ func (c *SubcommandGroupHolder) applicationCommandOption() *discordgo.Applicatio
 }
 
 type SubcommandGroup struct {
-	h []*ExecutorHolder
+	h []*Executor
 	m sync.Mutex
 }
 
@@ -144,14 +144,14 @@ func (c *SubcommandGroup) applicationCommandOptions() []*discordgo.ApplicationCo
 	for _, e := range c.h {
 		o = append(o, &discordgo.ApplicationCommandOption{
 			Type:        discordgo.ApplicationCommandOptionSubCommand,
-			Name:        e.Name,
-			Description: e.Description,
-			Options:     e.Executor.applicationCommandOptions(),
+			Name:        e.name,
+			Description: e.description,
+			Options:     e.applicationCommandOptions(),
 		})
 	}
 	return o
 }
-func (c *SubcommandGroup) FindSubcommand(name string) (*ExecutorHolder, bool) {
+func (c *SubcommandGroup) FindSubcommand(name string) (*Executor, bool) {
 	c.m.Lock()
 	defer c.m.Unlock()
 	h, i := c.findSub(name)
@@ -161,20 +161,15 @@ func (c *SubcommandGroup) FindSubcommand(name string) (*ExecutorHolder, bool) {
 	return h, true
 }
 
-func (c *SubcommandGroup) AddSubcommand(name string, description string, executor *Executor) {
+func (c *SubcommandGroup) AddSubcommand(executor *Executor) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	_, i := c.findSub(name)
-	h := &ExecutorHolder{
-		Name:        name,
-		Description: description,
-		Executor:    executor,
-	}
+	_, i := c.findSub(executor.name)
 	if i < 0 {
-		c.h = append(c.h, h)
+		c.h = append(c.h, executor)
 		return
 	}
-	c.h[i] = h
+	c.h[i] = executor
 }
 
 func (c *SubcommandGroup) RemoveSubcommand(name string) {
@@ -187,9 +182,9 @@ func (c *SubcommandGroup) RemoveSubcommand(name string) {
 	c.h = append(c.h[:i], c.h[i+1:]...)
 }
 
-func (c *SubcommandGroup) findSub(name string) (*ExecutorHolder, int) {
+func (c *SubcommandGroup) findSub(name string) (*Executor, int) {
 	for i, h := range c.h {
-		if h.Name == name {
+		if h.name == name {
 			return h, i
 		}
 	}

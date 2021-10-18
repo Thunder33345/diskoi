@@ -15,6 +15,8 @@ type Executable interface {
 //Executor stores the function, the type and parsed information
 //add ability to decode input into struct
 type Executor struct {
+	name        string
+	description string
 	//fn is the callback for when this slash command is called
 	fn interface{}
 	//ty is the type to provide
@@ -24,9 +26,11 @@ type Executor struct {
 	m        sync.Mutex
 }
 
-func NewExecutor(fn interface{}) *Executor {
+func NewExecutor(name string, description string, fn interface{}) *Executor {
 	e := Executor{
-		fn: fn,
+		name:        name,
+		description: description,
+		fn:          fn,
 	}
 
 	valOf := reflect.ValueOf(fn)
@@ -85,30 +89,23 @@ func (e *Executor) applicationCommandOptions() []*discordgo.ApplicationCommandOp
 	return o
 }
 
-type ExecutorHolder struct {
-	Name        string
-	Description string
-	Executor    *Executor
-	m           sync.Mutex
-}
-
-func (e *ExecutorHolder) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	f := reflect.ValueOf(e.Executor.fn)
+func (e *Executor) Execute(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	f := reflect.ValueOf(e.fn)
 	d, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
 	if ok {
 		//todo unguarded type assert
 	}
-	v := generateExecutorValue(s, d.Options, i.GuildID, e.Executor)
+	v := generateExecutorValue(s, d.Options, i.GuildID, e)
 	f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), v})
 }
 
-func (e *ExecutorHolder) applicationCommand() *discordgo.ApplicationCommand {
+func (e *Executor) applicationCommand() *discordgo.ApplicationCommand {
 	e.m.Lock()
 	defer e.m.Unlock()
 	return &discordgo.ApplicationCommand{
 		Type:        discordgo.ChatApplicationCommand,
-		Name:        e.Name,
-		Description: e.Description,
-		Options:     e.Executor.applicationCommandOptions(),
+		Name:        e.name,
+		Description: e.description,
+		Options:     e.applicationCommandOptions(),
 	}
 }
