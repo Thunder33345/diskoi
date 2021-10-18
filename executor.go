@@ -70,6 +70,14 @@ func NewExecutor(name string, description string, fn interface{}) (*Executor, er
 	return &e, nil
 }
 
+func MustNewExecutor(name string, description string, fn interface{}) *Executor {
+	executor, err := NewExecutor(name, description, fn)
+	if err != nil {
+		panic(err)
+	}
+	return executor
+}
+
 func (e *Executor) Name() string {
 	return e.name
 }
