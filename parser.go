@@ -190,3 +190,20 @@ func generateBindings(t reflect.Type) ([]*commandBinding, error) {
 	binds = append(req, opt...)
 	return binds, nil
 }
+
+func splitTag(tag string) map[string]string {
+	split := strings.Split(tag, ",")
+	res := make(map[string]string, len(split))
+	for _, sub := range split {
+		kv := strings.SplitN(sub, ":", 2)
+		switch len(kv) {
+		default:
+			continue
+		case 1:
+			res[kv[0]] = ""
+		case 2:
+			res[kv[0]] = kv[1]
+		}
+	}
+	return res
+}
