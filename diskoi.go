@@ -10,7 +10,6 @@ const magicTag = "diskoi"
 type Diskoi struct {
 	//todo better registration and unregistration and removal func
 	//todo some optional error handling func for command handling
-	//todo proper goroutine queue for handle
 	//todo missing/unregistered command handler
 	s                 *discordgo.Session
 	remover           func()

@@ -33,7 +33,7 @@ type Executor struct {
 
 var _ executable = (*Executor)(nil)
 
-func NewExecutor(name string, description string, fn interface{}) (*Executor, error) {
+func NewExecutor(name string, description string, fn interface{}) (*Executor, error) { //todo empty struct support
 	e := Executor{
 		name:        name,
 		description: description,

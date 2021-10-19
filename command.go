@@ -6,6 +6,8 @@ import (
 )
 
 type CommandGroup struct {
+	//todo anti colision of SubcommandGroup and subcommandGroups
+	//todo max element count limit
 	name             string
 	description      string
 	subcommandGroups []*SubcommandGroup
@@ -32,7 +34,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	defer c.m.RUnlock()
 	//initialize default fallbacks
 	//target is the name of a subcommand or a group
-	target := d.Options[0]
+	target := d.Options[0] //todo handle failures
 	//default embedded subcommand group to search
 	sg := c.SubcommandGroup
 
