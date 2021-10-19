@@ -6,7 +6,7 @@ import (
 )
 
 type CommandGroup struct {
-	//todo anti colision of SubcommandGroup and subcommandGroups
+	//todo anti collision of SubcommandGroup and subcommandGroups
 	//todo max element count limit
 	name             string
 	description      string
@@ -32,10 +32,12 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 ) {
 	c.m.RLock()
 	defer c.m.RUnlock()
+	path := make([]string, 0, 3)
 	if len(d.Options) <= 0 {
-		return nil, nil, MissingOptionsError{}
+		return nil, nil, MissingOptionsError{path: path}
 	}
 	target := d.Options[0]
+	path = append(path, target.Name)
 
 	var group *SubcommandGroup
 	switch {
@@ -43,22 +45,24 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 		group = c.SubcommandGroup
 	case target.Type == discordgo.ApplicationCommandOptionSubCommandGroup:
 		group, _ = c.findGroup(target.Name)
+		path = append(path, target.Name)
 		if group == nil {
-			return nil, nil, MissingSubcommandGroupError{name: target.Name}
+			return nil, nil, MissingSubcommandGroupError{name: target.Name, path: path}
 		}
 		//if so we unwrap options to get the actual name
 		target = target.Options[0]
 	default:
-		return nil, nil, NonCommandOptionTypeError{ty: target.Type}
+		return nil, nil, NonCommandOptionTypeError{ty: target.Type, path: path}
 	}
 
 	group.m.RLock()
 	defer group.m.RUnlock()
 	sub, _ := group.findSub(target.Name)
+	path = append(path, target.Name)
 	if sub != nil {
 		return sub, target.Options, nil
 	}
-	return nil, nil, MissingSubcommandError{name: target.Name}
+	return nil, nil, MissingSubcommandError{name: target.Name, path: path}
 }
 
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand {

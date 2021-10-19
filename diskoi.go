@@ -8,7 +8,7 @@ import (
 const magicTag = "diskoi"
 
 type Diskoi struct {
-	//todo better registration and unregistration and removal func
+	//todo better registration and un-registration and removal func
 	//todo some optional error handling func for command handling
 	//todo missing/unregistered command handler
 	//idea maybe syncHandling option for go execute
