@@ -11,6 +11,7 @@ type Diskoi struct {
 	//todo better registration and unregistration and removal func
 	//todo some optional error handling func for command handling
 	//todo missing/unregistered command handler
+	//idea maybe syncHandling option for go execute
 	s                 *discordgo.Session
 	remover           func()
 	commands          []executable

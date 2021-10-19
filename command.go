@@ -32,28 +32,33 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 ) {
 	c.m.RLock()
 	defer c.m.RUnlock()
-	//initialize default fallbacks
-	//target is the name of a subcommand or a group
-	target := d.Options[0] //todo handle failures
-	//default embedded subcommand group to search
-	sg := c.SubcommandGroup
+	if len(d.Options) <= 0 {
+		return nil, nil, MissingOptionsError{}
+	}
+	target := d.Options[0]
 
-	//find if there's a group named as such
-	grp, _ := c.findGroup(target.Name)
-	if grp != nil {
+	var group *SubcommandGroup
+	switch {
+	case target.Type == discordgo.ApplicationCommandOptionSubCommand:
+		group = c.SubcommandGroup
+	case target.Type == discordgo.ApplicationCommandOptionSubCommandGroup:
+		group, _ = c.findGroup(target.Name)
+		if group == nil {
+			return nil, nil, MissingSubcommandGroupError{name: target.Name}
+		}
 		//if so we unwrap options to get the actual name
 		target = target.Options[0]
-		//and also overwrite the default subcommand to said group
-		sg = grp
+	default:
+		return nil, nil, NonCommandOptionTypeError{ty: target.Type}
 	}
 
-	sg.m.RLock()
-	defer sg.m.RUnlock()
-	sub, _ := sg.findSub(target.Name)
+	group.m.RLock()
+	defer group.m.RUnlock()
+	sub, _ := group.findSub(target.Name)
 	if sub != nil {
 		return sub, target.Options, nil
 	}
-	return nil, nil, MissingSubcommandError{}
+	return nil, nil, MissingSubcommandError{name: target.Name}
 }
 
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand {
