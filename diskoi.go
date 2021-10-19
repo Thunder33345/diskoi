@@ -10,8 +10,9 @@ const magicTag = "diskoi"
 
 type Diskoi struct {
 	//todo better registration and unregistration and removal func
-	//todo some optional error handling func
-	//todo config to set panicness
+	//todo some optional error handling func for command handling
+	//todo proper goroutine queue for handle
+	//todo missing/unregistered command handler
 	s                 *discordgo.Session
 	remover           func()
 	commands          []executable
@@ -35,64 +36,6 @@ func (d *Diskoi) RegisterSession(s *discordgo.Session) {
 	d.remover = s.AddHandler(d.handle)
 }
 
-func (d *Diskoi) RegisterCommands() error {
-	d.m.Lock()
-	defer d.m.Unlock()
-	s := d.s
-	for _, cmd := range d.commands {
-		cc, err := s.ApplicationCommandCreate(s.State.User.ID, "", cmd.applicationCommand())
-		if err != nil {
-			return err
-		}
-		d.registeredCommand[cc.ID] = cmd
-	}
-	for gid, cms := range d.commandsGuild {
-		for _, cmd := range cms {
-			cc, err := s.ApplicationCommandCreate(s.State.User.ID, gid, cmd.applicationCommand())
-			if err != nil {
-				return err
-			}
-			d.registeredCommand[cc.ID] = cmd
-		}
-	}
-	return nil
-}
-
-func (d *Diskoi) UnregisterCommands() error {
-	d.m.Lock()
-	defer d.m.Unlock()
-	s := d.s
-	for id := range d.registeredCommand {
-		err := s.ApplicationCommandDelete(s.State.User.ID, "735145518220443680", id)
-		if err != nil {
-			return err
-		}
-		delete(d.registeredCommand, id)
-	}
-	return nil
-}
-
-func (d *Diskoi) AddCommand(exec *Executor) {
-	d.m.Lock()
-	defer d.m.Unlock()
-	d.commands = append(d.commands, exec)
-}
-
-func (d *Diskoi) AddGuildCommand(guild string, exec *Executor) {
-	d.m.Lock()
-	defer d.m.Unlock()
-	d.commandsGuild[guild] = append(d.commandsGuild[guild], exec)
-}
-
-func (d *Diskoi) AddCommandGroup(guild string, cg *CommandGroup) {
-	d.m.Lock()
-	defer d.m.Unlock()
-	if guild == "" {
-		d.commands = append(d.commands, cg)
-	} else {
-		d.commandsGuild[guild] = append(d.commandsGuild[guild], cg)
-	}
-}
 func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Type != discordgo.InteractionApplicationCommand ||
 		i.Data.Type() != discordgo.InteractionApplicationCommand {
@@ -106,7 +49,6 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if !ok {
 		return
 	}
-	//todo proper goroutine queue
 	executor, options, err := e.executor(id)
 	if err != nil {
 		return

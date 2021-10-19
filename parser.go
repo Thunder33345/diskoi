@@ -23,7 +23,7 @@ func generateExecutorValue(s *discordgo.Session, options []*discordgo.Applicatio
 	for _, opt := range options {
 		b := findBindings(opt.Name)
 		if b == nil {
-			panic("Failed to find " + opt.Name)
+			panic("Failed to find " + opt.Name) //todo return error instead
 		}
 		vf := val.Field(b.FieldIndex)
 		var v interface{}
