@@ -10,7 +10,7 @@ import (
 )
 
 func generateExecutorValue(
-	s *discordgo.Session, options []*discordgo.ApplicationCommandInteractionDataOption, guildID string, executor *Executor,
+	s *discordgo.Session, i *discordgo.InteractionCreate, options []*discordgo.ApplicationCommandInteractionDataOption, executor *Executor,
 ) (reflect.Value, error) {
 	valO := reflect.New(executor.ty)
 	val := valO.Elem()
@@ -67,14 +67,14 @@ func generateExecutorValue(
 		case discordgo.ApplicationCommandOptionUser:
 			v = opt.UserValue(s)
 		case discordgo.ApplicationCommandOptionRole:
-			v = opt.RoleValue(s, guildID)
+			v = opt.RoleValue(s, i.GuildID)
 		case discordgo.ApplicationCommandOptionMentionable:
 			u, err := s.User(opt.Value.(string))
 			if err == nil {
 				vf.FieldByName("User").Set(reflect.ValueOf(u))
 				continue
 			}
-			r, err := s.State.Role(guildID, opt.Value.(string))
+			r, err := s.State.Role(i.GuildID, opt.Value.(string))
 			if err == nil {
 				vf.FieldByName("Role").Set(reflect.ValueOf(r))
 				continue

@@ -36,6 +36,7 @@ type Executor struct {
 var _ executable = (*Executor)(nil)
 
 func NewExecutor(name string, description string, fn interface{}) (*Executor, error) {
+	//todo make fn's order truly dynamic and optional; unhardcode ses and inter as first and second param
 	e := Executor{
 		name:        name,
 		description: description,
@@ -149,7 +150,7 @@ func (e *Executor) Execute(
 		return nil
 	}
 
-	v, err := generateExecutorValue(s, o, i.GuildID, e)
+	v, err := generateExecutorValue(s, i, o, e)
 	if err != nil {
 		return err
 	}

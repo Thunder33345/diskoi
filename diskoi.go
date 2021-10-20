@@ -10,6 +10,7 @@ const magicTag = "diskoi"
 type Diskoi struct {
 	//todo better registration and un-registration and removal func
 	//idea maybe syncHandling option for go execute
+	//todo some sort of way to store executable and stop unnecessary re-register on boot?
 	s                 *discordgo.Session
 	remover           func()
 	commands          []executable
