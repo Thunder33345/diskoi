@@ -44,7 +44,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if !ok {
 		return
 	}
-	e, ok := d.registeredCommand[id.ID]
+	e, ok := d.registeredCmd(id.ID)
 	if !ok {
 		return
 	}
@@ -53,6 +53,13 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 	_ = executor.Execute(s, i, options)
+}
+
+func (d *Diskoi) registeredCmd(id string) (executable, bool) {
+	d.m.Lock()
+	defer d.m.Unlock()
+	e, ok := d.registeredCommand[id]
+	return e, ok
 }
 
 func (d *Diskoi) Close() error {
