@@ -51,7 +51,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 	executor, options, err := e.executor(id)
 	if err != nil {
-		d.getErrorHandler()(s, i, e, err)
+		d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
 		return
 	}
 	_ = executor.Execute(s, i, options)

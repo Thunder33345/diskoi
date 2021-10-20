@@ -5,8 +5,16 @@ import (
 	"strings"
 )
 
-func errPath(path []string) string {
-	return "/" + strings.Join(path, " ")
+type CommandParsingError struct {
+	err error
+}
+
+func (e CommandParsingError) Error() string {
+	return "Command Parsing Error: " + e.err.Error()
+}
+
+func (e *CommandParsingError) Unwrap() error {
+	return e.err
 }
 
 type MissingOptionsError struct {
@@ -43,4 +51,8 @@ type MissingSubcommandError struct {
 
 func (e MissingSubcommandError) Error() string {
 	return "Missing Subcommand: subcommand \"" + e.name + "\" not found on" + errPath(e.path)
+}
+
+func errPath(path []string) string {
+	return "/" + strings.Join(path, " ")
 }
