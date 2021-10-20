@@ -4,20 +4,26 @@ func (d *Diskoi) RegisterCommands() error {
 	d.m.Lock()
 	defer d.m.Unlock()
 	s := d.s
-	for _, cmd := range d.commands {
-		cc, err := s.ApplicationCommandCreate(s.State.User.ID, "", cmd.applicationCommand())
+	f := func(e executable, g string) error {
+		cc, err := s.ApplicationCommandCreate(s.State.User.ID, g, e.applicationCommand())
 		if err != nil {
 			return err
 		}
-		d.registeredCommand[cc.ID] = cmd
+		d.registeredCommand[cc.ID] = e
+		return nil
+	}
+	for _, cmd := range d.commands {
+		err := f(cmd, "")
+		if err != nil {
+			return err
+		}
 	}
 	for gid, cms := range d.commandsGuild {
 		for _, cmd := range cms {
-			cc, err := s.ApplicationCommandCreate(s.State.User.ID, gid, cmd.applicationCommand())
+			err := f(cmd, gid)
 			if err != nil {
 				return err
 			}
-			d.registeredCommand[cc.ID] = cmd
 		}
 	}
 	return nil
@@ -52,22 +58,31 @@ func (d *Diskoi) AddGuildCommand(guild string, exec executable) {
 	}
 }
 
+func (d *Diskoi) RemoveCommand(exec executable) error {
+	return d.RemoveGuildCommand("", exec)
+}
+
 func (d *Diskoi) RemoveGuildCommand(guild string, exec executable) error {
 	d.m.Lock()
 	defer d.m.Unlock()
-	if guild == "" {
-		for i, e2 := range d.commands {
-			if exec == e2 {
-				d.commands = append(d.commands[:i], d.commands[i+1:]...)
+	f := func(es []executable, exec executable) []executable {
+		for i := 0; i < len(es); {
+			v := es[i]
+			if v == exec {
+				es = append(es[:i], es[i+1:]...)
+				continue
 			}
+			i++
 		}
-	} else {
-		for i, e2 := range d.commandsGuild[guild] {
-			if exec == e2 {
-				d.commands = append(d.commandsGuild[guild][:i], d.commandsGuild[guild][i+1:]...)
-			}
-		}
+		return es
 	}
+
+	if guild == "" {
+		d.commands = f(d.commands, exec)
+	} else {
+		d.commandsGuild[guild] = f(d.commandsGuild[guild], exec)
+	}
+
 	for id, e2 := range d.registeredCommand {
 		if exec == e2 {
 			err := d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, id)

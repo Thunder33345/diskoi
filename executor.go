@@ -25,7 +25,7 @@ type Executor struct {
 	//fn is the callback for when this slash command is called
 	fn interface{}
 	//noBindings for slim commands that only accept 2 args
-	noBindings bool //stopship test this
+	noBindings bool
 	//ty is the type to provide
 	ty reflect.Type
 	//bindings stores processed information about the ty and also external settings
