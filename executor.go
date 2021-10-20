@@ -24,6 +24,8 @@ type Executor struct {
 	description string
 	//fn is the callback for when this slash command is called
 	fn interface{}
+	//noBindings for slim commands that only accept 2 args
+	noBindings bool //stopship test this
 	//ty is the type to provide
 	ty reflect.Type
 	//bindings stores processed information about the ty and also external settings
@@ -33,7 +35,7 @@ type Executor struct {
 
 var _ executable = (*Executor)(nil)
 
-func NewExecutor(name string, description string, fn interface{}) (*Executor, error) { //todo empty struct support
+func NewExecutor(name string, description string, fn interface{}) (*Executor, error) {
 	e := Executor{
 		name:        name,
 		description: description,
@@ -49,13 +51,18 @@ func NewExecutor(name string, description string, fn interface{}) (*Executor, er
 		return nil, errors.New(fmt.Sprintf("given function(%s) has %d outputs, expecting 0", signature(fn), valOf.Type().NumOut()))
 	}
 
-	if valOf.Type().NumIn() != 3 {
-		return nil, errors.New(fmt.Sprintf("given function(%s) has %d inputs, expecting 3", signature(fn), valOf.Type().NumIn()))
+	if valOf.Type().NumIn() < 2 || valOf.Type().NumIn() > 3 {
+		return nil, errors.New(fmt.Sprintf("given function(%s) has %d inputs, expecting 2 or 3", signature(fn), valOf.Type().NumIn()))
 	}
 
 	if valOf.Type().In(0) != reflect.TypeOf((*discordgo.Session)(nil)) ||
 		valOf.Type().In(1) != reflect.TypeOf((*discordgo.InteractionCreate)(nil)) {
 		return nil, errors.New(fmt.Sprintf("given function(%s) has incorrect type, expecting func(s *discordgo.Session, i *discordgo.InteractionCreate, ...)", signature(fn)))
+	}
+
+	if valOf.Type().NumIn() == 2 {
+		e.noBindings = true
+		return &e, nil
 	}
 
 	if valOf.Type().In(2).Kind() != reflect.Struct {
@@ -136,6 +143,11 @@ func (e *Executor) Execute(
 	o []*discordgo.ApplicationCommandInteractionDataOption,
 ) error {
 	f := reflect.ValueOf(e.fn)
+
+	if e.noBindings {
+		f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i)})
+		return nil
+	}
 
 	v, err := generateExecutorValue(s, o, i.GuildID, e)
 	if err != nil {
