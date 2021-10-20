@@ -18,6 +18,7 @@ type Diskoi struct {
 	commandsGuild     map[string][]executable
 	registeredCommand map[string]executable
 	m                 sync.Mutex
+	errorHandler      errorHandler
 }
 
 func NewDiskoi() *Diskoi {
@@ -50,6 +51,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 	executor, options, err := e.executor(id)
 	if err != nil {
+		d.getErrorHandler()(s, i, e, err)
 		return
 	}
 	_ = executor.Execute(s, i, options)
@@ -62,6 +64,12 @@ func (d *Diskoi) registeredCmd(id string) (executable, bool) {
 	return e, ok
 }
 
+func (d *Diskoi) getErrorHandler() errorHandler {
+	d.m.Lock()
+	defer d.m.Unlock()
+	return d.errorHandler
+}
+
 func (d *Diskoi) Close() error {
 	d.m.Lock()
 	defer d.m.Unlock()
@@ -72,3 +80,5 @@ func (d *Diskoi) Close() error {
 	d.s = nil
 	return nil
 }
+
+type errorHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, exec executable, err error)
