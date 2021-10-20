@@ -9,8 +9,7 @@ const magicTag = "diskoi"
 
 type Diskoi struct {
 	//todo better registration and un-registration and removal func
-	//todo some optional error handling func for command handling
-	//todo missing/unregistered command handler
+	//todo handling of missing/unregistered command handler
 	//idea maybe syncHandling option for go execute
 	s                 *discordgo.Session
 	remover           func()
@@ -19,6 +18,7 @@ type Diskoi struct {
 	registeredCommand map[string]executable
 	m                 sync.Mutex
 	errorHandler      errorHandler
+	rawHandler        rawInteractionHandler
 }
 
 func NewDiskoi() *Diskoi {
@@ -47,6 +47,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 	e, ok := d.registeredCmd(id.ID)
 	if !ok {
+		d.getRawHandler()(s, i)
 		return
 	}
 	executor, options, err := e.executor(id)
@@ -67,10 +68,28 @@ func (d *Diskoi) registeredCmd(id string) (executable, bool) {
 	return e, ok
 }
 
+func (d *Diskoi) SetErrorHandler(handler errorHandler) {
+	d.m.Lock()
+	defer d.m.Unlock()
+	d.errorHandler = handler
+}
+
 func (d *Diskoi) getErrorHandler() errorHandler {
 	d.m.Lock()
 	defer d.m.Unlock()
 	return d.errorHandler
+}
+
+func (d *Diskoi) SetRawHandler(handler rawInteractionHandler) {
+	d.m.Lock()
+	defer d.m.Unlock()
+	d.rawHandler = handler
+}
+
+func (d *Diskoi) getRawHandler() rawInteractionHandler {
+	d.m.Lock()
+	defer d.m.Unlock()
+	return d.rawHandler
 }
 
 func (d *Diskoi) Close() error {
@@ -85,3 +104,4 @@ func (d *Diskoi) Close() error {
 }
 
 type errorHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, exec executable, err error)
+type rawInteractionHandler func(*discordgo.Session, *discordgo.InteractionCreate)
