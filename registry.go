@@ -1,5 +1,7 @@
 package diskoi
 
+import "github.com/bwmarrin/discordgo"
+
 func (d *Diskoi) RegisterCommands() error {
 	d.m.Lock()
 	defer d.m.Unlock()
@@ -26,6 +28,50 @@ func (d *Diskoi) RegisterCommands() error {
 			}
 		}
 	}
+	return nil
+}
+
+func (d *Diskoi) AssumeRegistered() error {
+	d.m.Lock()
+	defer d.m.Unlock()
+	f := func(guild string) error { //todo compare registered vs inventory
+		rc, err := d.s.ApplicationCommands(d.s.State.User.ID, guild)
+		if err != nil {
+			return err
+		}
+		for _, cmd := range rc {
+			if cmd.Type != discordgo.ChatApplicationCommand {
+				continue
+			}
+
+			exec := d.findGuildCommandByName(guild, cmd.Name)
+			if exec == nil {
+				_ = d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, cmd.ID)
+				continue
+			}
+			if len(cmd.Options) == len(exec.applicationCommand().Options) { //todo better comparing
+				d.registeredCommand[cmd.ID] = exec
+			} else {
+				cc, err := d.s.ApplicationCommandCreate(d.s.State.User.ID, guild, exec.applicationCommand())
+				if err != nil {
+					return err
+				}
+				d.registeredCommand[cc.ID] = exec
+			}
+		}
+		return nil
+	}
+	err := f("")
+	if err != nil {
+		return err
+	}
+	for guild := range d.commandsGuild {
+		err := f(guild)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -92,4 +138,20 @@ func (d *Diskoi) RemoveGuildCommand(guild string, exec executable) error {
 		}
 	}
 	return nil
+}
+
+func (d *Diskoi) findGuildCommandByName(guild string, name string) executable { //idea consider exporting
+	f := func(e []executable) executable {
+		for _, cmd := range e {
+			if cmd.Name() == name {
+				return cmd
+			}
+		}
+		return nil
+	}
+
+	if guild == "" {
+		return f(d.commands)
+	}
+	return f(d.commandsGuild[guild])
 }

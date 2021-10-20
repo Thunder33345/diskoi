@@ -9,6 +9,7 @@ import (
 )
 
 type executable interface {
+	Name() string
 	executor(d discordgo.ApplicationCommandInteractionData) (
 		executor *Executor,
 		options []*discordgo.ApplicationCommandInteractionDataOption,
