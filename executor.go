@@ -137,7 +137,10 @@ func (e *Executor) Execute(
 ) error {
 	f := reflect.ValueOf(e.fn)
 
-	v := generateExecutorValue(s, o, i.GuildID, e)
+	v, err := generateExecutorValue(s, o, i.GuildID, e)
+	if err != nil {
+		return err
+	}
 	f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), v})
 	return nil
 }

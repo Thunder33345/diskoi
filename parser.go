@@ -9,7 +9,9 @@ import (
 	"strings"
 )
 
-func generateExecutorValue(s *discordgo.Session, options []*discordgo.ApplicationCommandInteractionDataOption, guildID string, executor *Executor) reflect.Value {
+func generateExecutorValue(
+	s *discordgo.Session, options []*discordgo.ApplicationCommandInteractionDataOption, guildID string, executor *Executor,
+) (reflect.Value, error) {
 	valO := reflect.New(executor.ty)
 	val := valO.Elem()
 	findBindings := func(name string) *commandBinding {
@@ -23,7 +25,7 @@ func generateExecutorValue(s *discordgo.Session, options []*discordgo.Applicatio
 	for _, opt := range options {
 		b := findBindings(opt.Name)
 		if b == nil {
-			panic("Failed to find " + opt.Name) //todo return error instead
+			return reflect.Value{}, MissingBindingsError{name: opt.Name}
 		}
 		vf := val.Field(b.FieldIndex)
 		var v interface{}
@@ -93,7 +95,7 @@ func generateExecutorValue(s *discordgo.Session, options []*discordgo.Applicatio
 		}
 		vf.Set(rv)
 	}
-	return val
+	return val, nil
 }
 
 func generateBindings(t reflect.Type) ([]*commandBinding, error) {

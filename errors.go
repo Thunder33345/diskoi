@@ -53,6 +53,26 @@ func (e MissingSubcommandError) Error() string {
 	return "Missing Subcommand: subcommand \"" + e.name + "\" not found on" + errPath(e.path)
 }
 
+type CommandExecutionError struct {
+	err error
+}
+
+func (e CommandExecutionError) Error() string {
+	return "" + e.err.Error()
+}
+
+func (e CommandExecutionError) Unwrap() error {
+	return e.err
+}
+
+type MissingBindingsError struct {
+	name string
+}
+
+func (e MissingBindingsError) Error() string {
+	return "Missing bindings for " + e.name
+}
+
 func errPath(path []string) string {
 	return "/" + strings.Join(path, " ")
 }
