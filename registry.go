@@ -1,6 +1,9 @@
 package diskoi
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/bwmarrin/discordgo"
+	"reflect"
+)
 
 func (d *Diskoi) RegisterCommands() error {
 	d.m.Lock()
@@ -31,42 +34,59 @@ func (d *Diskoi) RegisterCommands() error {
 	return nil
 }
 
-func (d *Diskoi) AssumeRegistered() error {
+func (d *Diskoi) SyncCommands() error {
 	d.m.Lock()
 	defer d.m.Unlock()
-	f := func(guild string) error { //todo compare registered vs inventory
+	f := func(guild string, es []executable) error {
 		rc, err := d.s.ApplicationCommands(d.s.State.User.ID, guild)
 		if err != nil {
 			return err
 		}
+		cMap := make(map[string]*discordgo.ApplicationCommand, len(rc))
 		for _, cmd := range rc {
 			if cmd.Type != discordgo.ChatApplicationCommand {
 				continue
 			}
+			cMap[cmd.Name] = cmd
+		}
 
-			exec := d.findGuildCommandByName(guild, cmd.Name)
-			if exec == nil {
-				_ = d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, cmd.ID)
-				continue
+		eMap := make(map[string]struct{}, len(es))
+		for _, e := range es {
+			eMap[e.Name()] = struct{}{}
+			rc, ok := cMap[e.Name()]
+			eac := e.applicationCommand()
+			if ok {
+				if len(eac.Options) == len(rc.Options) &&
+					eac.Description == rc.Description &&
+					(len(eac.Options) == 0 || reflect.DeepEqual(eac.Options, rc.Options)) {
+					d.registeredCommand[rc.ID] = e
+					continue
+				}
 			}
-			if len(cmd.Options) == len(exec.applicationCommand().Options) { //todo better comparing
-				d.registeredCommand[cmd.ID] = exec
-			} else {
-				cc, err := d.s.ApplicationCommandCreate(d.s.State.User.ID, guild, exec.applicationCommand())
+			cc, err := d.s.ApplicationCommandCreate(d.s.State.User.ID, guild, eac)
+			if err != nil {
+				return err
+			}
+			d.registeredCommand[cc.ID] = e
+		}
+
+		for cName, cmd := range cMap {
+			_, ok := eMap[cName]
+			if !ok {
+				err = d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, cmd.ID)
 				if err != nil {
 					return err
 				}
-				d.registeredCommand[cc.ID] = exec
 			}
 		}
 		return nil
 	}
-	err := f("")
+	err := f("", d.commands)
 	if err != nil {
 		return err
 	}
 	for guild := range d.commandsGuild {
-		err := f(guild)
+		err := f(guild, d.commandsGuild[guild])
 		if err != nil {
 			return err
 		}
