@@ -9,7 +9,6 @@ const magicTag = "diskoi"
 
 type Diskoi struct {
 	//idea maybe syncHandling option for go execute
-	//todo rename EVERYTHING, find a more reasonable name for everything exported or not
 	s                 *discordgo.Session
 	remover           func()
 	commands          []Command
@@ -44,8 +43,8 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if !ok {
 		return
 	}
-	e, ok := d.registeredCmd(id.ID)
-	if !ok {
+	e := d.findRegisteredCmdById(id.ID)
+	if e == nil {
 		d.getRawHandler()(s, i)
 		return
 	}
@@ -60,11 +59,11 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
-func (d *Diskoi) registeredCmd(id string) (Command, bool) {
+func (d *Diskoi) findRegisteredCmdById(id string) Command {
 	d.m.Lock()
 	defer d.m.Unlock()
-	cmd, ok := d.registeredCommand[id]
-	return cmd, ok
+	cmd, _ := d.registeredCommand[id]
+	return cmd
 }
 
 func (d *Diskoi) SetErrorHandler(handler errorHandler) {

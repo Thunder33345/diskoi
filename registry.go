@@ -116,7 +116,19 @@ func (d *Diskoi) AddCommand(cmd Command) {
 func (d *Diskoi) AddGuildCommand(guild string, cmd Command) {
 	d.m.Lock()
 	defer d.m.Unlock()
-	//todo duplicate = upsert
+	dupe, i := d.findGuildCommandByName(guild, cmd.Name())
+	if dupe != nil {
+		c, id := d.findRegisteredCmd(dupe)
+		if c != nil {
+			_ = d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, id)
+		}
+
+		if guild == "" {
+			d.commands[i] = cmd
+		} else {
+			d.commandsGuild[guild][i] = cmd
+		}
+	}
 	if guild == "" {
 		d.commands = append(d.commands, cmd)
 	} else {
@@ -161,21 +173,38 @@ func (d *Diskoi) RemoveGuildCommand(guild string, cmd Command) error {
 }
 
 func (d *Diskoi) FindCommandByName(name string) Command {
-	return d.FindGuildCommandByName("", name)
+	c, _ := d.findGuildCommandByName("", name)
+	return c
 }
 
 func (d *Diskoi) FindGuildCommandByName(guild string, name string) Command {
-	f := func(c []Command) Command {
-		for _, cmd := range c {
+	c, _ := d.findGuildCommandByName(guild, name)
+	return c
+}
+
+func (d *Diskoi) findGuildCommandByName(guild string, name string) (Command, int) {
+	f := func(c []Command) (Command, int) {
+		for i, cmd := range c {
 			if cmd.Name() == name {
-				return cmd
+				return cmd, i
 			}
 		}
-		return nil
+		return nil, -1
 	}
 
 	if guild == "" {
 		return f(d.commands)
 	}
 	return f(d.commandsGuild[guild])
+}
+
+func (d *Diskoi) findRegisteredCmd(cmd Command) (Command, string) {
+	d.m.Lock()
+	defer d.m.Unlock()
+	for id, rc := range d.registeredCommand {
+		if cmd == rc {
+			return cmd, id
+		}
+	}
+	return nil, ""
 }
