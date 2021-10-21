@@ -3,15 +3,15 @@ package diskoi
 import "github.com/bwmarrin/discordgo"
 
 type commandBinding struct {
-	FieldIndex int
-	FieldName  string
+	fieldIndex int
+	fieldName  string
 
-	Type         discordgo.ApplicationCommandOptionType
-	Name         string
-	Description  string
-	Required     bool
-	Choices      []*discordgo.ApplicationCommandOptionChoice
-	ChannelTypes []discordgo.ChannelType
+	cType        discordgo.ApplicationCommandOptionType
+	name         string
+	description  string
+	required     bool
+	choices      []*discordgo.ApplicationCommandOptionChoice
+	channelTypes []discordgo.ChannelType
 
 	//autocomplete is a callback to autocomplete for this option
 	//will fire this if this is focused

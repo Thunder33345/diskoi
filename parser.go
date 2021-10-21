@@ -16,7 +16,7 @@ func generateExecutorValue(
 	val := valO.Elem()
 	findBindings := func(name string) *commandBinding {
 		for _, b := range executor.bindings {
-			if name == b.Name {
+			if name == b.name {
 				return b
 			}
 		}
@@ -27,9 +27,9 @@ func generateExecutorValue(
 		if b == nil {
 			return reflect.Value{}, MissingBindingsError{name: opt.Name}
 		}
-		vf := val.Field(b.FieldIndex)
+		vf := val.Field(b.fieldIndex)
 		var v interface{}
-		switch b.Type {
+		switch b.cType {
 		case discordgo.ApplicationCommandOptionString:
 			x := opt.StringValue()
 			switch {
@@ -116,20 +116,20 @@ func generateBindings(t reflect.Type) ([]*commandBinding, error) {
 		}
 
 		bind := &commandBinding{}
-		bind.FieldIndex = i
-		bind.FieldName = f.Name
-		bind.Name = strings.ToLower(f.Name)
+		bind.fieldIndex = i
+		bind.fieldName = f.Name
+		bind.name = strings.ToLower(f.Name)
 
 		if ok {
 			tags := splitTag(tag)
 			for key, val := range tags {
 				switch key {
 				case "name":
-					bind.Name = val
+					bind.name = val
 				case "description":
-					bind.Description = val
+					bind.description = val
 				case "required":
-					bind.Required = true
+					bind.required = true
 				case "channelTypes":
 					cts := strings.Split(val, "+")
 					for _, ct := range cts {
@@ -137,14 +137,14 @@ func generateBindings(t reflect.Type) ([]*commandBinding, error) {
 						if e != nil {
 							return nil, errors.New(fmt.Sprintf("non int convertable given for channelTypes on %s for %s", f.Name, t.Name()))
 						}
-						bind.ChannelTypes = append(bind.ChannelTypes, discordgo.ChannelType(ci))
+						bind.channelTypes = append(bind.channelTypes, discordgo.ChannelType(ci))
 					}
 				}
 			}
 		}
 
-		if bind.Description == "" {
-			return nil, errors.New(fmt.Sprintf("Description of %s.%s cant be empty", t.Name(), bind.FieldName))
+		if bind.description == "" {
+			return nil, errors.New(fmt.Sprintf("Description of %s.%s cant be empty", t.Name(), bind.fieldName))
 		}
 
 		kind := f.Type.Kind()
@@ -153,24 +153,24 @@ func generateBindings(t reflect.Type) ([]*commandBinding, error) {
 		}
 		switch kind {
 		case reflect.String:
-			bind.Type = discordgo.ApplicationCommandOptionString
+			bind.cType = discordgo.ApplicationCommandOptionString
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			bind.Type = discordgo.ApplicationCommandOptionInteger
+			bind.cType = discordgo.ApplicationCommandOptionInteger
 		case reflect.Bool:
-			bind.Type = discordgo.ApplicationCommandOptionBoolean
+			bind.cType = discordgo.ApplicationCommandOptionBoolean
 		case reflect.Float32:
 		case reflect.Float64:
-			bind.Type = 10 //type doubles fixme get constant from discord go
+			bind.cType = 10 //type doubles fixme get constant from discord go
 		case reflect.Struct:
 			switch {
 			case f.Type == reflect.TypeOf(discordgo.Channel{}):
-				bind.Type = discordgo.ApplicationCommandOptionChannel
+				bind.cType = discordgo.ApplicationCommandOptionChannel
 			case f.Type == reflect.TypeOf(discordgo.User{}):
-				bind.Type = discordgo.ApplicationCommandOptionUser
+				bind.cType = discordgo.ApplicationCommandOptionUser
 			case f.Type == reflect.TypeOf(discordgo.Role{}):
-				bind.Type = discordgo.ApplicationCommandOptionRole
+				bind.cType = discordgo.ApplicationCommandOptionRole
 			case f.Type == reflect.TypeOf(Mentionable{}):
-				bind.Type = discordgo.ApplicationCommandOptionMentionable
+				bind.cType = discordgo.ApplicationCommandOptionMentionable
 			default: //idea: support custom types with diskoi marshaller
 				continue
 			}
@@ -183,7 +183,7 @@ func generateBindings(t reflect.Type) ([]*commandBinding, error) {
 	req := make([]*commandBinding, 0, t.NumField())
 	opt := make([]*commandBinding, 0, t.NumField())
 	for _, b := range binds {
-		if b.Required {
+		if b.required {
 			req = append(req, b)
 		} else {
 			opt = append(opt, b)

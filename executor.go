@@ -100,8 +100,8 @@ func (e *Executor) SetChoices(field string, choices []*discordgo.ApplicationComm
 	e.m.Lock()
 	defer e.m.Unlock()
 	for _, b := range e.bindings {
-		if b.FieldName == field {
-			b.Choices = choices
+		if b.fieldName == field {
+			b.choices = choices
 			return
 		}
 	}
@@ -113,8 +113,8 @@ func (e *Executor) SetChannelTypes(field string, channels []discordgo.ChannelTyp
 	e.m.Lock()
 	defer e.m.Unlock()
 	for _, b := range e.bindings {
-		if b.FieldName == field {
-			b.ChannelTypes = channels
+		if b.fieldName == field {
+			b.channelTypes = channels
 			return
 		}
 	}
@@ -165,12 +165,12 @@ func (e *Executor) applicationCommandOptions() []*discordgo.ApplicationCommandOp
 	o := make([]*discordgo.ApplicationCommandOption, 0, len(e.bindings))
 	for _, b := range e.bindings {
 		o = append(o, &discordgo.ApplicationCommandOption{
-			Type:         b.Type,
-			Name:         b.Name,
-			Description:  b.Description,
-			Required:     b.Required,
-			Choices:      b.Choices,
-			ChannelTypes: b.ChannelTypes,
+			Type:         b.cType,
+			Name:         b.name,
+			Description:  b.description,
+			Required:     b.required,
+			Choices:      b.choices,
+			ChannelTypes: b.channelTypes,
 		})
 	}
 	return o
