@@ -8,13 +8,20 @@ import (
 )
 
 type executable interface {
+	Executable
 	Name() string
+	Description() string
 	executor(d discordgo.ApplicationCommandInteractionData) (
 		executor *Executor,
 		options []*discordgo.ApplicationCommandInteractionDataOption,
 		err error,
 	)
 	applicationCommand() *discordgo.ApplicationCommand
+}
+
+type Executable interface {
+	Name() string
+	Description() string
 }
 
 type errorHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, exec executable, err error)

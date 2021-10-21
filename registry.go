@@ -160,7 +160,11 @@ func (d *Diskoi) RemoveGuildCommand(guild string, exec executable) error {
 	return nil
 }
 
-func (d *Diskoi) findGuildCommandByName(guild string, name string) executable { //idea consider exporting
+func (d *Diskoi) FindCommandByName(name string) Executable {
+	return d.FindGuildCommandByName("", name)
+}
+
+func (d *Diskoi) FindGuildCommandByName(guild string, name string) Executable {
 	f := func(e []executable) executable {
 		for _, cmd := range e {
 			if cmd.Name() == name {

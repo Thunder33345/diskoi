@@ -29,6 +29,10 @@ func (c *CommandGroup) Name() string {
 	return c.name
 }
 
+func (c *CommandGroup) Description() string {
+	return c.description
+}
+
 func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	executor *Executor,
 	options []*discordgo.ApplicationCommandInteractionDataOption,
