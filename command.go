@@ -15,7 +15,7 @@ type CommandGroup struct {
 	m sync.RWMutex
 }
 
-var _ executable = (*CommandGroup)(nil)
+var _ Command = (*CommandGroup)(nil)
 
 func NewCommandGroup(name string, description string) *CommandGroup {
 	return &CommandGroup{

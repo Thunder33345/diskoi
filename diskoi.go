@@ -8,13 +8,13 @@ import (
 const magicTag = "diskoi"
 
 type Diskoi struct {
-	//todo method to find executable by name
 	//idea maybe syncHandling option for go execute
+	//todo rename EVERYTHING, find a more reasonable name for everything exported or not
 	s                 *discordgo.Session
 	remover           func()
-	commands          []executable
-	commandsGuild     map[string][]executable
-	registeredCommand map[string]executable
+	commands          []Command
+	commandsGuild     map[string][]Command
+	registeredCommand map[string]Command
 	m                 sync.Mutex
 	errorHandler      errorHandler
 	rawHandler        rawInteractionHandler
@@ -22,8 +22,8 @@ type Diskoi struct {
 
 func NewDiskoi() *Diskoi {
 	return &Diskoi{
-		commandsGuild:     map[string][]executable{},
-		registeredCommand: map[string]executable{},
+		commandsGuild:     map[string][]Command{},
+		registeredCommand: map[string]Command{},
 		m:                 sync.Mutex{},
 	}
 }
@@ -60,11 +60,11 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
-func (d *Diskoi) registeredCmd(id string) (executable, bool) {
+func (d *Diskoi) registeredCmd(id string) (Command, bool) {
 	d.m.Lock()
 	defer d.m.Unlock()
-	e, ok := d.registeredCommand[id]
-	return e, ok
+	cmd, ok := d.registeredCommand[id]
+	return cmd, ok
 }
 
 func (d *Diskoi) SetErrorHandler(handler errorHandler) {

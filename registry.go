@@ -9,12 +9,12 @@ func (d *Diskoi) RegisterCommands() error {
 	d.m.Lock()
 	defer d.m.Unlock()
 	s := d.s
-	f := func(e executable, g string) error {
-		cc, err := s.ApplicationCommandCreate(s.State.User.ID, g, e.applicationCommand())
+	f := func(c Command, g string) error {
+		cc, err := s.ApplicationCommandCreate(s.State.User.ID, g, c.applicationCommand())
 		if err != nil {
 			return err
 		}
-		d.registeredCommand[cc.ID] = e
+		d.registeredCommand[cc.ID] = c
 		return nil
 	}
 	for _, cmd := range d.commands {
@@ -37,7 +37,7 @@ func (d *Diskoi) RegisterCommands() error {
 func (d *Diskoi) SyncCommands() error {
 	d.m.Lock()
 	defer d.m.Unlock()
-	f := func(guild string, es []executable) error {
+	f := func(guild string, cs []Command) error {
 		rc, err := d.s.ApplicationCommands(d.s.State.User.ID, guild)
 		if err != nil {
 			return err
@@ -50,16 +50,16 @@ func (d *Diskoi) SyncCommands() error {
 			cMap[cmd.Name] = cmd
 		}
 
-		eMap := make(map[string]struct{}, len(es))
-		for _, e := range es {
-			eMap[e.Name()] = struct{}{}
-			rc, ok := cMap[e.Name()]
-			eac := e.applicationCommand()
+		eMap := make(map[string]struct{}, len(cs))
+		for _, c := range cs {
+			eMap[c.Name()] = struct{}{}
+			rc, ok := cMap[c.Name()]
+			eac := c.applicationCommand()
 			if ok {
 				if len(eac.Options) == len(rc.Options) &&
 					eac.Description == rc.Description &&
 					(len(eac.Options) == 0 || reflect.DeepEqual(eac.Options, rc.Options)) {
-					d.registeredCommand[rc.ID] = e
+					d.registeredCommand[rc.ID] = c
 					continue
 				}
 			}
@@ -67,7 +67,7 @@ func (d *Diskoi) SyncCommands() error {
 			if err != nil {
 				return err
 			}
-			d.registeredCommand[cc.ID] = e
+			d.registeredCommand[cc.ID] = c
 		}
 
 		for cName, cmd := range cMap {
@@ -109,48 +109,48 @@ func (d *Diskoi) UnregisterCommands() error {
 	return nil
 }
 
-func (d *Diskoi) AddCommand(exec executable) {
-	d.AddGuildCommand("", exec)
+func (d *Diskoi) AddCommand(cmd Command) {
+	d.AddGuildCommand("", cmd)
 }
 
-func (d *Diskoi) AddGuildCommand(guild string, exec executable) {
+func (d *Diskoi) AddGuildCommand(guild string, cmd Command) {
 	d.m.Lock()
 	defer d.m.Unlock()
 	//todo duplicate = upsert
 	if guild == "" {
-		d.commands = append(d.commands, exec)
+		d.commands = append(d.commands, cmd)
 	} else {
-		d.commandsGuild[guild] = append(d.commandsGuild[guild], exec)
+		d.commandsGuild[guild] = append(d.commandsGuild[guild], cmd)
 	}
 }
 
-func (d *Diskoi) RemoveCommand(exec executable) error {
-	return d.RemoveGuildCommand("", exec)
+func (d *Diskoi) RemoveCommand(cmd Command) error {
+	return d.RemoveGuildCommand("", cmd)
 }
 
-func (d *Diskoi) RemoveGuildCommand(guild string, exec executable) error {
+func (d *Diskoi) RemoveGuildCommand(guild string, cmd Command) error {
 	d.m.Lock()
 	defer d.m.Unlock()
-	f := func(es []executable, exec executable) []executable {
-		for i := 0; i < len(es); {
-			v := es[i]
-			if v == exec {
-				es = append(es[:i], es[i+1:]...)
+	f := func(cs []Command, cmd Command) []Command {
+		for i := 0; i < len(cs); {
+			v := cs[i]
+			if v == cmd {
+				cs = append(cs[:i], cs[i+1:]...)
 				continue
 			}
 			i++
 		}
-		return es
+		return cs
 	}
 
 	if guild == "" {
-		d.commands = f(d.commands, exec)
+		d.commands = f(d.commands, cmd)
 	} else {
-		d.commandsGuild[guild] = f(d.commandsGuild[guild], exec)
+		d.commandsGuild[guild] = f(d.commandsGuild[guild], cmd)
 	}
 
 	for id, e2 := range d.registeredCommand {
-		if exec == e2 {
+		if cmd == e2 {
 			err := d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, id)
 			if err != nil {
 				return err
@@ -160,13 +160,13 @@ func (d *Diskoi) RemoveGuildCommand(guild string, exec executable) error {
 	return nil
 }
 
-func (d *Diskoi) FindCommandByName(name string) Executable {
+func (d *Diskoi) FindCommandByName(name string) Command {
 	return d.FindGuildCommandByName("", name)
 }
 
-func (d *Diskoi) FindGuildCommandByName(guild string, name string) Executable {
-	f := func(e []executable) executable {
-		for _, cmd := range e {
+func (d *Diskoi) FindGuildCommandByName(guild string, name string) Command {
+	f := func(c []Command) Command {
+		for _, cmd := range c {
 			if cmd.Name() == name {
 				return cmd
 			}

@@ -24,10 +24,11 @@ type Executor struct {
 	m        sync.Mutex
 }
 
-var _ executable = (*Executor)(nil)
+var _ Command = (*Executor)(nil)
 
 func NewExecutor(name string, description string, fn interface{}) (*Executor, error) {
 	//todo make fn's order truly dynamic and optional; unhardcode ses and inter as first and second param
+	//todo support diskoi.interactions.Interactions
 	e := Executor{
 		name:        name,
 		description: description,
