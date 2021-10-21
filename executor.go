@@ -130,7 +130,7 @@ func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
 	return e, d.Options, nil
 }
 
-func (e *Executor) Execute(
+func (e *Executor) execute(
 	s *discordgo.Session,
 	i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption,
