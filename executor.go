@@ -8,16 +8,6 @@ import (
 	"sync"
 )
 
-type executable interface {
-	Name() string
-	executor(d discordgo.ApplicationCommandInteractionData) (
-		executor *Executor,
-		options []*discordgo.ApplicationCommandInteractionDataOption,
-		err error,
-	)
-	applicationCommand() *discordgo.ApplicationCommand
-}
-
 //Executor stores the function, the type and parsed information
 //add ability to decode input into struct
 type Executor struct {

@@ -125,15 +125,3 @@ func (c *CommandGroup) findGroup(name string) (*SubcommandGroup, int) {
 	}
 	return nil, -1
 }
-
-type applicationCommandLister interface {
-	applicationCommand() *discordgo.ApplicationCommand
-}
-
-type applicationCommandOptionsLister interface {
-	applicationCommandOptions() []*discordgo.ApplicationCommandOption
-}
-
-type applicationCommandOptionLister interface {
-	applicationCommandOption() *discordgo.ApplicationCommandOption
-}

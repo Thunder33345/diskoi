@@ -8,9 +8,8 @@ import (
 const magicTag = "diskoi"
 
 type Diskoi struct {
-	//todo better registration and un-registration and removal func
+	//todo method to find executable by name
 	//idea maybe syncHandling option for go execute
-	//todo some sort of way to store executable and stop unnecessary re-register on boot?
 	s                 *discordgo.Session
 	remover           func()
 	commands          []executable
@@ -102,6 +101,3 @@ func (d *Diskoi) Close() error {
 	d.s = nil
 	return nil
 }
-
-type errorHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, exec executable, err error)
-type rawInteractionHandler func(*discordgo.Session, *discordgo.InteractionCreate)
