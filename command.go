@@ -32,15 +32,13 @@ func (c *CommandGroup) Description() string {
 }
 
 func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
-	executor *Executor,
-	options []*discordgo.ApplicationCommandInteractionDataOption,
-	err error,
+	*Executor, []*discordgo.ApplicationCommandInteractionDataOption, []string, error,
 ) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 	path := make([]string, 0, 3)
 	if len(d.Options) <= 0 {
-		return nil, nil, MissingOptionsError{path: path}
+		return nil, nil, nil, MissingOptionsError{path: path}
 	}
 	target := d.Options[0]
 	path = append(path, target.Name)
@@ -53,12 +51,12 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 		group, _ = c.findGroup(target.Name)
 		path = append(path, target.Name)
 		if group == nil {
-			return nil, nil, MissingSubcommandGroupError{name: target.Name, path: path}
+			return nil, nil, nil, MissingSubcommandGroupError{name: target.Name, path: path}
 		}
 		//if so we unwrap options to get the actual name
 		target = target.Options[0]
 	default:
-		return nil, nil, NonCommandOptionTypeError{ty: target.Type, path: path}
+		return nil, nil, nil, NonCommandOptionTypeError{ty: target.Type, path: path}
 	}
 
 	group.m.RLock()
@@ -66,9 +64,9 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	sub, _ := group.findSub(target.Name)
 	path = append(path, target.Name)
 	if sub != nil {
-		return sub, target.Options, nil
+		return sub, target.Options, path, nil
 	}
-	return nil, nil, MissingSubcommandError{name: target.Name, path: path}
+	return nil, nil, nil, MissingSubcommandError{name: target.Name, path: path}
 }
 
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand {

@@ -1,6 +1,7 @@
 package diskoi
 
 import (
+	"diskoi/parser"
 	"github.com/bwmarrin/discordgo"
 	"sync"
 )
@@ -47,12 +48,12 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		d.getRawHandler()(s, i)
 		return
 	}
-	executor, options, err := e.executor(id)
+	executor, options, path, err := e.executor(id)
 	if err != nil {
 		d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
 		return
 	}
-	err = executor.execute(s, i, options)
+	err = executor.execute(s, i, options, &parser.DiskoiData{Path: path})
 	if err != nil {
 		d.getErrorHandler()(s, i, e, CommandExecutionError{err: err})
 	}

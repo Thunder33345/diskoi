@@ -64,7 +64,7 @@ const (
 )
 
 type DiskoiData struct {
-	path []string
+	Path []string
 }
 
 type Unmarshal interface {

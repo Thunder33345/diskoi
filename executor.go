@@ -72,19 +72,21 @@ func (e *Executor) Unlock() {
 	e.m.Unlock()
 }
 func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
-	executor *Executor,
-	options []*discordgo.ApplicationCommandInteractionDataOption,
-	err error,
+	*Executor,
+	[]*discordgo.ApplicationCommandInteractionDataOption,
+	[]string,
+	error,
 ) {
-	return e, d.Options, nil
+	return e, d.Options, []string{e.name}, nil
 }
 
 func (e *Executor) execute(
 	s *discordgo.Session,
 	i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption,
+	dd *parser.DiskoiData,
 ) error {
-	err := e.data.Execute(s, i, o, parser.DiskoiData{}) //todo fill in diskoi data
+	err := e.data.Execute(s, i, o, dd)
 	if err != nil {
 		return errors.New(fmt.Sprintf("error running command %s: %v", e.name, err))
 	}

@@ -24,7 +24,7 @@ type Data struct {
 }
 
 func (d *Data) Execute(s *discordgo.Session, i *discordgo.InteractionCreate,
-	opt []*discordgo.ApplicationCommandInteractionDataOption, data DiskoiData) error {
+	opt []*discordgo.ApplicationCommandInteractionDataOption, data *DiskoiData) error {
 	args, err := reconstructFunctionArgs(d.fnArg, s, i, opt)
 	if err != nil {
 		return errors.New(fmt.Sprintf("error reconstructing arguments: %s", err.Error()))

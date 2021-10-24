@@ -13,6 +13,7 @@ type Command interface {
 	executor(d discordgo.ApplicationCommandInteractionData) (
 		executor *Executor,
 		options []*discordgo.ApplicationCommandInteractionDataOption,
+		path []string,
 		err error,
 	)
 	applicationCommand() *discordgo.ApplicationCommand

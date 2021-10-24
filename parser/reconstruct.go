@@ -36,7 +36,7 @@ func reconstructFunctionArgs(fnArg []*fnArgument, s *discordgo.Session, i *disco
 	return values, nil
 }
 func reconstructCommandArgument(d *Data, s *discordgo.Session, i *discordgo.InteractionCreate,
-	opts []*discordgo.ApplicationCommandInteractionDataOption, data DiskoiData) (reflect.Value, error) {
+	opts []*discordgo.ApplicationCommandInteractionDataOption, data *DiskoiData) (reflect.Value, error) {
 	val := reflect.New(d.cmdStruct).Elem()
 	for _, opt := range opts {
 		py := findPyArg(d.cmdArg, opt.Name)
@@ -107,7 +107,7 @@ func reconstructCommandArgument(d *Data, s *discordgo.Session, i *discordgo.Inte
 		fVal := val.FieldByIndex(arg.fieldIndex)
 		switch arg.dataType {
 		case cmdDataTypeDiskoiPath:
-			fVal.Set(reflect.ValueOf(data.path))
+			fVal.Set(reflect.ValueOf(data.Path))
 		default:
 			return reflect.Value{}, errors.New(fmt.Sprintf("unrecognized specialArgType %v in %s", arg.dataType, arg.fieldName))
 		}
