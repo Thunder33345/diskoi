@@ -9,6 +9,7 @@ import (
 
 //Data is an analysis produced by Analyze
 //It contains everything needed to reconstruct and call it back
+//todo rename this Data feels too vague, maybe CommandData
 type Data struct {
 	//fn is the callback function
 	fn interface{}

@@ -40,8 +40,8 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	if len(d.Options) <= 0 {
 		return nil, nil, nil, MissingOptionsError{path: path}
 	}
+	path = append(path, c.name)
 	target := d.Options[0]
-	path = append(path, target.Name)
 
 	var group *SubcommandGroup
 	switch {
