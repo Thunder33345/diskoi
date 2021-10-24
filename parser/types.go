@@ -36,7 +36,7 @@ func (a fnArgumentType) String() string {
 	}
 }
 
-type PayloadArgument struct { //maybe rename to command argument
+type CommandArgument struct {
 	fieldIndex []int
 	fieldName  string
 

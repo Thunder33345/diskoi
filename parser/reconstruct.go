@@ -35,11 +35,11 @@ func reconstructFunctionArgs(fnArg []*fnArgument, s *discordgo.Session, i *disco
 	}
 	return values, nil
 }
-func reconstructPayload(d *Data, s *discordgo.Session, i *discordgo.InteractionCreate,
+func reconstructCommandArgument(d *Data, s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption, data DiskoiData) (reflect.Value, error) {
-	val := reflect.New(d.pyTy).Elem()
+	val := reflect.New(d.cmdStruct).Elem()
 	for _, opt := range opts {
-		py := findPyArg(d.pyArg, opt.Name)
+		py := findPyArg(d.cmdArg, opt.Name)
 		if py == nil {
 			return reflect.Value{}, errors.New(fmt.Sprintf("missing option %s with type %v", opt.Name, opt.Type))
 		}
@@ -103,7 +103,7 @@ func reconstructPayload(d *Data, s *discordgo.Session, i *discordgo.InteractionC
 		fVal.Set(recVal)
 	}
 
-	for _, arg := range d.pysArg {
+	for _, arg := range d.cmdSpecialArg {
 		fVal := val.FieldByIndex(arg.fieldIndex)
 		switch arg.dataType {
 		case cmdDataTypeDiskoiPath:
@@ -115,7 +115,7 @@ func reconstructPayload(d *Data, s *discordgo.Session, i *discordgo.InteractionC
 	return val, nil
 }
 
-func findPyArg(pys []*PayloadArgument, name string) *PayloadArgument {
+func findPyArg(pys []*CommandArgument, name string) *CommandArgument {
 	for _, py := range pys {
 		if name == py.Name {
 			return py

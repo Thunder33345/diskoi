@@ -19,6 +19,7 @@ var (
 	rTypeCommandOptions = reflect.TypeOf((*CommandOptions)(nil)).Elem()
 )
 
+//Analyze analyzes the function, and returns Data that can be executed
 func Analyze(fn interface{}) (data *Data, error error) {
 	data = &Data{
 		fn: fn,
@@ -65,13 +66,13 @@ func Analyze(fn interface{}) (data *Data, error error) {
 				return nil, errors.New(fmt.Sprintf("unrecognized argument %s(#%d) on function,"+
 					"should be a struct", original.String(), i))
 			}
-			py, pys, err := analyzePayload(at, []int{})
+			py, pys, err := analyzeCommandStruct(at, []int{})
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("error parsing command data(%s): %v", original.String(), err))
 			}
-			data.pyTy = at
-			data.pyArg = py
-			data.pysArg = pys
+			data.cmdStruct = at
+			data.cmdArg = py
+			data.cmdSpecialArg = pys
 			return data, nil
 		}
 		data.fnArg = append(data.fnArg, fna)
@@ -80,8 +81,9 @@ func Analyze(fn interface{}) (data *Data, error error) {
 	return data, nil
 }
 
-func analyzePayload(typ reflect.Type, pre []int) ([]*PayloadArgument, []*specialArgument, error) {
-	cmdArgs := make([]*PayloadArgument, 0, typ.NumField())
+//analyzeCommandStruct analyzes a struct and create slice of CommandArgument and specialArgument
+func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*CommandArgument, []*specialArgument, error) {
+	cmdArgs := make([]*CommandArgument, 0, typ.NumField())
 	spcArgs := make([]*specialArgument, 0, 1)
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
@@ -93,7 +95,7 @@ func analyzePayload(typ reflect.Type, pre []int) ([]*PayloadArgument, []*special
 			if f.Type.Kind() == reflect.Ptr {
 				return nil, nil, errors.New(fmt.Sprintf(`unsupported pointered anonymous field in "%s.%s"`, typ.String(), f.Name))
 			}
-			a, s, err := analyzePayload(f.Type, pos)
+			a, s, err := analyzeCommandStruct(f.Type, pos)
 			if err != nil {
 				return nil, nil, errors.New(fmt.Sprintf(`in "%s": %s`, typ.String(), err.Error()))
 			}
@@ -102,7 +104,7 @@ func analyzePayload(typ reflect.Type, pre []int) ([]*PayloadArgument, []*special
 			continue
 		}
 
-		py, pys, err := analyzePayloadField(f)
+		py, pys, err := analyzeCommandArgumentField(f)
 		if err != nil {
 			return nil, nil, errors.New(fmt.Sprintf(`failed parsing struct field on "%s.%s": %s`, typ.String(), f.Name, err.Error()))
 		}
@@ -121,11 +123,11 @@ func analyzePayload(typ reflect.Type, pre []int) ([]*PayloadArgument, []*special
 
 const magicTag = "diskoi"
 
-//analyzePayloadField analyze a field of a payload and return cmdBinding for said fields
-func analyzePayloadField(f reflect.StructField) (*PayloadArgument, *specialArgument, error) {
+//analyzeCommandArgumentField analyze a command struct field and return CommandArgument or specialArgument
+func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *specialArgument, error) {
 	tag, ok := f.Tag.Lookup(magicTag)
 
-	arg := &PayloadArgument{
+	arg := &CommandArgument{
 		fieldName: f.Name,
 		Name:      strings.ToLower(f.Name),
 	}

@@ -48,11 +48,11 @@ func (e *Executor) Description() string {
 	return e.description
 }
 
-func (e *Executor) ArgumentByName(name string) *parser.PayloadArgument {
+func (e *Executor) ArgumentByName(name string) *parser.CommandArgument {
 	return e.data.ArgumentByName(name)
 }
 
-func (e *Executor) ArgumentByIndex(index []int) *parser.PayloadArgument {
+func (e *Executor) ArgumentByIndex(index []int) *parser.CommandArgument {
 	return e.data.ArgumentByIndex(index)
 }
 

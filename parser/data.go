@@ -12,16 +12,15 @@ import (
 type Data struct {
 	//fn is the callback function
 	fn interface{}
-	//fnArg is a slice of analyzed arguments taken by the function
+	//fnArg is a slice of arguments taken by the function
 	fnArg []*fnArgument
-	//pyTy is type of the payload for this fn
-	//payload must be the last argument of the fn, if exist
-	//payload is the struct that will be present to discord as command options
-	pyTy reflect.Type
-	//pyArg is a slice of analyzed payload data, used for generating ApplicationCommandOptions
-	pyArg []*PayloadArgument
-	//pysArg holds slice of special meta arguments
-	pysArg []*specialArgument
+	//cmdStruct is the struct that will be parsed as the arguments for discord
+	//cmdStruct must be the last argument of the fn, if exist
+	cmdStruct reflect.Type
+	//cmdArg is a slice command arguments from the struct, used for generating ApplicationCommandOptions
+	cmdArg []*CommandArgument
+	//cmdSpecialArg holds slice of special meta arguments
+	cmdSpecialArg []*specialArgument
 }
 
 func (d *Data) Execute(s *discordgo.Session, i *discordgo.InteractionCreate,
@@ -31,10 +30,10 @@ func (d *Data) Execute(s *discordgo.Session, i *discordgo.InteractionCreate,
 		return errors.New(fmt.Sprintf("error reconstructing arguments: %s", err.Error()))
 	}
 
-	if d.pyTy != nil {
-		py, err := reconstructPayload(d, s, i, opt, data)
+	if d.cmdStruct != nil {
+		py, err := reconstructCommandArgument(d, s, i, opt, data)
 		if err != nil {
-			return errors.New(fmt.Sprintf("error reconstructing payload %s: %s", d.pyTy.String(), err.Error()))
+			return errors.New(fmt.Sprintf("error reconstructing command argument %s: %s", d.cmdStruct.String(), err.Error()))
 		}
 		args = append(args, py)
 	}
@@ -50,8 +49,8 @@ func (d *Data) Autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate
 }
 
 func (d *Data) ApplicationCommandOptions() []*discordgo.ApplicationCommandOption {
-	o := make([]*discordgo.ApplicationCommandOption, 0, len(d.pyArg))
-	for _, b := range d.pyArg {
+	o := make([]*discordgo.ApplicationCommandOption, 0, len(d.cmdArg))
+	for _, b := range d.cmdArg {
 		o = append(o, &discordgo.ApplicationCommandOption{
 			Type:         b.cType,
 			Name:         b.Name,
@@ -64,8 +63,8 @@ func (d *Data) ApplicationCommandOptions() []*discordgo.ApplicationCommandOption
 	return o
 }
 
-func (d *Data) ArgumentByName(name string) *PayloadArgument {
-	for _, cmd := range d.pyArg {
+func (d *Data) ArgumentByName(name string) *CommandArgument {
+	for _, cmd := range d.cmdArg {
 		if cmd.fieldName == name {
 			return cmd
 		}
@@ -73,8 +72,8 @@ func (d *Data) ArgumentByName(name string) *PayloadArgument {
 	return nil
 }
 
-func (d *Data) ArgumentByIndex(index []int) *PayloadArgument {
-	for _, cmd := range d.pyArg {
+func (d *Data) ArgumentByIndex(index []int) *CommandArgument {
+	for _, cmd := range d.cmdArg {
 		if indexEqual(cmd.fieldIndex, index) {
 			return cmd
 		}
