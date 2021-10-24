@@ -18,6 +18,7 @@ const (
 	fnArgumentTypeSession
 	fnArgumentTypeInteraction
 	fnArgumentTypeMarshal
+	fnArgumentTypeMarshalPtr
 )
 
 func (a fnArgumentType) String() string {

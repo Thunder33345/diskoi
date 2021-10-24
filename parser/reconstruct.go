@@ -22,7 +22,7 @@ func reconstructFunctionArgs(fnArg []*fnArgument, s *discordgo.Session, i *disco
 			m := mt.Interface().(Unmarshal)
 			err := m.UnmarshalDiskoi(s, i, o)
 			if err != nil {
-				return nil, errors.New(fmt.Sprintf("error unmarshalling %s: %s", arg.reflectTyp.Name(), err.Error()))
+				return nil, errors.New(fmt.Sprintf("error unmarshalling %s: %s", arg.reflectTyp.String(), err.Error()))
 			}
 			if arg.typ == fnArgumentTypeMarshalPtr {
 				values = append(values, reflect.ValueOf(m))
@@ -97,7 +97,7 @@ func reconstructPayload(d *Data, s *discordgo.Session, i *discordgo.InteractionC
 				recVal = recVal.Convert(fVal.Type())
 			} else {
 				return reflect.Value{}, errors.New(fmt.Sprintf(`cant convert %s(%v) into %s(%v)`,
-					recVal.Type().Name(), recVal.Type().Kind(), fVal.Type().Name(), fVal.Type().Kind()))
+					recVal.Type().String(), recVal.Type().Kind(), fVal.Type().String(), fVal.Type().Kind()))
 			}
 		}
 		fVal.Set(recVal)

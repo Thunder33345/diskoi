@@ -25,7 +25,7 @@ func Analyze(fn interface{}) (data *Data, error error) {
 	}
 	typ := reflect.TypeOf(fn)
 	if typ.Kind() != reflect.Func {
-		return nil, errors.New(fmt.Sprintf("given type %s(%s) is not type of func", typ.Name(), typ.Kind().String()))
+		return nil, errors.New(fmt.Sprintf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String()))
 	}
 	if typ.NumOut() != 0 {
 		return nil, errors.New(fmt.Sprintf("given function(%s) has %d outputs, expecting 0", signature(fn), typ.NumOut()))
@@ -56,18 +56,18 @@ func Analyze(fn interface{}) (data *Data, error error) {
 		default:
 			if i < typ.NumIn()-1 {
 				return nil, errors.New(fmt.Sprintf("unrecognized argument %s(#%d) on function, "+
-					"should be *discordgo.Session, *discordgo.InteractionCreate or something that implement diskoi.Unmarshal", at.Name(), i))
+					"should be *discordgo.Session, *discordgo.InteractionCreate or something that implement diskoi.Unmarshal", original.String(), i))
 			}
 			if at.Kind() == reflect.Ptr {
 				at = at.Elem()
 			}
 			if at.Kind() != reflect.Struct {
 				return nil, errors.New(fmt.Sprintf("unrecognized argument %s(#%d) on function,"+
-					"should be a struct", at.Name(), i))
+					"should be a struct", original.String(), i))
 			}
 			py, pys, err := analyzePayload(at, []int{})
 			if err != nil {
-				return nil, errors.New(fmt.Sprintf("error parsing command data(%s): %v", at.Name(), err))
+				return nil, errors.New(fmt.Sprintf("error parsing command data(%s): %v", original.String(), err))
 			}
 			data.pyTy = at
 			data.pyArg = py
@@ -87,15 +87,15 @@ func analyzePayload(typ reflect.Type, pre []int) ([]*PayloadArgument, []*special
 		f := typ.Field(i)
 		pos := append(append(make([]int, 0, len(pre)+1), pre...), i)
 		if !f.IsExported() {
-			return nil, nil, errors.New(fmt.Sprintf(`unsupported unexported field in "%s.%s"`, typ.Name(), f.Name))
+			return nil, nil, errors.New(fmt.Sprintf(`unsupported unexported field in "%s.%s"`, typ.String(), f.Name))
 		}
 		if f.Anonymous {
 			if f.Type.Kind() == reflect.Ptr {
-				return nil, nil, errors.New(fmt.Sprintf(`unsupported pointered anonymous field in "%s.%s"`, typ.Name(), f.Name))
+				return nil, nil, errors.New(fmt.Sprintf(`unsupported pointered anonymous field in "%s.%s"`, typ.String(), f.Name))
 			}
 			a, s, err := analyzePayload(f.Type, pos)
 			if err != nil {
-				return nil, nil, errors.New(fmt.Sprintf(`in "%s": %s`, typ.Name(), err.Error()))
+				return nil, nil, errors.New(fmt.Sprintf(`in "%s": %s`, typ.String(), err.Error()))
 			}
 			cmdArgs = append(cmdArgs, a...)
 			spcArgs = append(spcArgs, s...)
@@ -104,7 +104,7 @@ func analyzePayload(typ reflect.Type, pre []int) ([]*PayloadArgument, []*special
 
 		py, pys, err := analyzePayloadField(f)
 		if err != nil {
-			return nil, nil, errors.New(fmt.Sprintf(`failed parsing struct field on "%s.%s": %s`, typ.Name(), f.Name, err.Error()))
+			return nil, nil, errors.New(fmt.Sprintf(`failed parsing struct field on "%s.%s": %s`, typ.String(), f.Name, err.Error()))
 		}
 		if py != nil {
 			py.fieldIndex = pos
@@ -216,10 +216,10 @@ func analyzePayloadField(f reflect.StructField) (*PayloadArgument, *specialArgum
 		case elmT == reflect.TypeOf(mentionable.Mentionable{}):
 			arg.cType = discordgo.ApplicationCommandOptionMentionable
 		default:
-			return nil, nil, errors.New(fmt.Sprintf(`unrecognized struct "%s"`, f.Type.Name()))
+			return nil, nil, errors.New(fmt.Sprintf(`unrecognized struct "%s"`, f.Type.String()))
 		}
 	default:
-		return nil, nil, errors.New(fmt.Sprintf(`unsupported kind "%s"`, elmT.String()))
+		return nil, nil, errors.New(fmt.Sprintf(`unsupported kind "%s"`, f.Type.String()))
 	}
 	return arg, nil, nil
 }

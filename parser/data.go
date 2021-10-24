@@ -34,7 +34,7 @@ func (d *Data) Execute(s *discordgo.Session, i *discordgo.InteractionCreate,
 	if d.pyTy != nil {
 		py, err := reconstructPayload(d, s, i, opt, data)
 		if err != nil {
-			return errors.New(fmt.Sprintf("error reconstructing payload %s: %s", d.pyTy.Name(), err.Error()))
+			return errors.New(fmt.Sprintf("error reconstructing payload %s: %s", d.pyTy.String(), err.Error()))
 		}
 		args = append(args, py)
 	}

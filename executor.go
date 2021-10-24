@@ -26,7 +26,7 @@ func NewExecutor(name string, description string, fn interface{}) (*Executor, er
 	}
 	data, err := parser.Analyze(fn)
 	if err != nil {
-		return nil, err
+		return nil, errors.New(fmt.Sprintf(`failed to parse command "%s": %v`, name, err))
 	}
 	e.data = data
 	return &e, nil
