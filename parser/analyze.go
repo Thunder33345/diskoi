@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"diskoi"
+	"diskoi/mentionable"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -35,16 +35,23 @@ func Analyze(fn interface{}) (data *Data, error error) {
 	for i := 0; i < typ.NumIn(); i++ {
 		fna := &fnArgument{}
 		at := typ.In(i)
+		original := at
+		atp := at
+		if atp.Kind() != reflect.Ptr {
+			atp = reflect.PtrTo(at)
+		}
 		switch {
 		case at == rTypeSession:
 			fna.typ = fnArgumentTypeSession
 		case at == rTypeInteractCreate:
 			fna.typ = fnArgumentTypeInteraction
-		case at.Implements(rTypeUnmarshal):
-			if at.Kind() != reflect.Ptr {
-				return nil, errors.New(fmt.Sprintf("function argument %s(#%d) receiving custom unmarshaler should be pointer", at.Name(), i))
+		case atp.Implements(rTypeUnmarshal):
+			if at.Kind() == reflect.Ptr {
+				fna.typ = fnArgumentTypeMarshalPtr
+				at = at.Elem()
+			} else {
+				fna.typ = fnArgumentTypeMarshal
 			}
-			fna.typ = fnArgumentTypeMarshal
 			fna.reflectTyp = at
 		default:
 			if i < typ.NumIn()-1 {

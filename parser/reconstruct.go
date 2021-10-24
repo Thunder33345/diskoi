@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"diskoi"
+	"diskoi/mentionable"
 	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
@@ -17,14 +17,18 @@ func reconstructFunctionArgs(fnArg []*fnArgument, s *discordgo.Session, i *disco
 			values = append(values, reflect.ValueOf(s))
 		case fnArgumentTypeInteraction:
 			values = append(values, reflect.ValueOf(i))
-		case fnArgumentTypeMarshal:
+		case fnArgumentTypeMarshal, fnArgumentTypeMarshalPtr:
 			mt := reflect.New(arg.reflectTyp)
 			m := mt.Interface().(Unmarshal)
 			err := m.UnmarshalDiskoi(s, i, o)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("error unmarshalling %s: %s", arg.reflectTyp.Name(), err.Error()))
 			}
-			values = append(values, reflect.ValueOf(m))
+			if arg.typ == fnArgumentTypeMarshalPtr {
+				values = append(values, reflect.ValueOf(m))
+			} else {
+				values = append(values, reflect.ValueOf(m).Elem())
+			}
 		default:
 			return nil, errors.New(fmt.Sprintf("unrecognized argument type #%d (%s)", uint(arg.typ), arg.typ.String()))
 		}
