@@ -22,11 +22,6 @@ type errorHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, cmd
 
 type rawInteractionHandler func(*discordgo.Session, *discordgo.InteractionCreate)
 
-type Mentionable struct {
-	Role *discordgo.Role
-	User *discordgo.User
-}
-
 type applicationCommandLister interface {
 	applicationCommand() *discordgo.ApplicationCommand
 }

@@ -183,11 +183,11 @@ func analyzePayloadField(f reflect.StructField) (*PayloadArgument, *specialArgum
 		arg.Choices = ch.DiskoiCommandOptions()
 	}
 
-	kind := f.Type.Kind()
-	if kind == reflect.Ptr {
-		kind = f.Type.Elem().Kind()
+	elmT := f.Type
+	if elmT.Kind() == reflect.Ptr {
+		elmT = f.Type.Elem()
 	}
-	switch kind {
+	switch elmT.Kind() {
 	case reflect.String:
 		arg.cType = discordgo.ApplicationCommandOptionString
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -200,19 +200,19 @@ func analyzePayloadField(f reflect.StructField) (*PayloadArgument, *specialArgum
 		arg.cType = 10 //type doubles fixme get constant from discord go
 	case reflect.Struct:
 		switch {
-		case f.Type == reflect.TypeOf(discordgo.Channel{}):
+		case elmT == reflect.TypeOf(discordgo.Channel{}):
 			arg.cType = discordgo.ApplicationCommandOptionChannel
-		case f.Type == reflect.TypeOf(discordgo.User{}):
+		case elmT == reflect.TypeOf(discordgo.User{}):
 			arg.cType = discordgo.ApplicationCommandOptionUser
-		case f.Type == reflect.TypeOf(discordgo.Role{}):
+		case elmT == reflect.TypeOf(discordgo.Role{}):
 			arg.cType = discordgo.ApplicationCommandOptionRole
-		case f.Type == reflect.TypeOf(diskoi.Mentionable{}):
+		case elmT == reflect.TypeOf(mentionable.Mentionable{}):
 			arg.cType = discordgo.ApplicationCommandOptionMentionable
 		default:
 			return nil, nil, errors.New(fmt.Sprintf(`unrecognized struct "%s"`, f.Type.Name()))
 		}
 	default:
-		return nil, nil, errors.New(fmt.Sprintf(`unsupported kind "%s"`, kind.String()))
+		return nil, nil, errors.New(fmt.Sprintf(`unsupported kind "%s"`, elmT.String()))
 	}
 	return arg, nil, nil
 }

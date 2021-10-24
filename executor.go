@@ -1,72 +1,34 @@
 package diskoi
 
 import (
+	"diskoi/parser"
 	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
-	"reflect"
 	"sync"
 )
 
 //Executor stores the function, the type and parsed information
 //add ability to decode input into struct
-type Executor struct {
+type Executor struct { //todo rearrange all methods
 	name        string
 	description string
-	//fn is the callback for when this slash command is called
-	fn interface{}
-	//noBindings for slim commands that only accept 2 args
-	noBindings bool
-	//ty is the type to provide
-	ty reflect.Type
-	//bindings stores processed information about the ty and also external settings
-	bindings []*commandBinding
-	m        sync.Mutex
+	data        *parser.Data
+	m           sync.Mutex
 }
 
 var _ Command = (*Executor)(nil)
 
 func NewExecutor(name string, description string, fn interface{}) (*Executor, error) {
-	//todo make fn's order truly dynamic and optional; unhardcode ses and inter as first and second param
-	//todo support diskoi.interactions.Interactions
 	e := Executor{
 		name:        name,
 		description: description,
-		fn:          fn,
 	}
-
-	valOf := reflect.ValueOf(fn)
-	if valOf.Kind() != reflect.Func {
-		return nil, errors.New(fmt.Sprintf("given interface %s(%s) is not type of func", valOf.Type().Name(), valOf.Kind().String()))
-	}
-
-	if valOf.Type().NumOut() != 0 {
-		return nil, errors.New(fmt.Sprintf("given function(%s) has %d outputs, expecting 0", signature(fn), valOf.Type().NumOut()))
-	}
-
-	if valOf.Type().NumIn() < 2 || valOf.Type().NumIn() > 3 {
-		return nil, errors.New(fmt.Sprintf("given function(%s) has %d inputs, expecting 2 or 3", signature(fn), valOf.Type().NumIn()))
-	}
-
-	if valOf.Type().In(0) != reflect.TypeOf((*discordgo.Session)(nil)) ||
-		valOf.Type().In(1) != reflect.TypeOf((*discordgo.InteractionCreate)(nil)) {
-		return nil, errors.New(fmt.Sprintf("given function(%s) has incorrect type, expecting func(s *discordgo.Session, i *discordgo.InteractionCreate, ...)", signature(fn)))
-	}
-
-	if valOf.Type().NumIn() == 2 {
-		e.noBindings = true
-		return &e, nil
-	}
-
-	if valOf.Type().In(2).Kind() != reflect.Struct {
-		return nil, errors.New(fmt.Sprintf("given function(%s) has incorrect type, expecting the 3rd type to be struct not %s", signature(fn), valOf.Type().In(2).Kind().String()))
-	}
-	e.ty = valOf.Type().In(2)
-	var err error
-	e.bindings, err = generateBindings(e.ty)
+	data, err := parser.Analyze(fn)
 	if err != nil {
 		return nil, err
 	}
+	e.data = data
 	return &e, nil
 }
 
@@ -86,42 +48,29 @@ func (e *Executor) Description() string {
 	return e.description
 }
 
+func (e *Executor) ArgumentByName(name string) *parser.PayloadArgument {
+	return e.data.ArgumentByName(name)
+}
+
+func (e *Executor) ArgumentByIndex(index []int) *parser.PayloadArgument {
+	return e.data.ArgumentByIndex(index)
+}
+
 func (e *Executor) As(name string, description string) *Executor {
 	return &Executor{
 		name:        name,
 		description: description,
-		fn:          e.fn,
-		ty:          e.ty,
-		bindings:    e.bindings,
+		data:        e.data,
 	}
 }
 
-func (e *Executor) SetChoices(field string, choices []*discordgo.ApplicationCommandOptionChoice) {
+func (e *Executor) Lock() {
 	e.m.Lock()
-	defer e.m.Unlock()
-	for _, b := range e.bindings {
-		if b.fieldName == field {
-			b.choices = choices
-			return
-		}
-	}
-	r := reflect.TypeOf(e.ty)
-	panic(fmt.Sprintf("Failed to set choices: error finding field '%s' on %s(%s)", field, r.Name(), r.Kind()))
 }
 
-func (e *Executor) SetChannelTypes(field string, channels []discordgo.ChannelType) {
-	e.m.Lock()
-	defer e.m.Unlock()
-	for _, b := range e.bindings {
-		if b.fieldName == field {
-			b.channelTypes = channels
-			return
-		}
-	}
-	r := reflect.TypeOf(e.ty)
-	panic(fmt.Sprintf("Failed to set choices: error finding field '%s' on %s(%s)", field, r.Name(), r.Kind()))
+func (e *Executor) Unlock() {
+	e.m.Unlock()
 }
-
 func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
 	executor *Executor,
 	options []*discordgo.ApplicationCommandInteractionDataOption,
@@ -135,18 +84,10 @@ func (e *Executor) execute(
 	i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption,
 ) error {
-	f := reflect.ValueOf(e.fn)
-
-	if e.noBindings {
-		f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i)})
-		return nil
-	}
-
-	v, err := generateExecutorValue(s, i, o, e)
+	err := e.data.Execute(s, i, o, parser.DiskoiData{}) //todo fill in diskoi data
 	if err != nil {
-		return err
+		return errors.New(fmt.Sprintf("error running command %s: %v", e.name, err))
 	}
-	f.Call([]reflect.Value{reflect.ValueOf(s), reflect.ValueOf(i), v})
 	return nil
 }
 
@@ -157,21 +98,12 @@ func (e *Executor) applicationCommand() *discordgo.ApplicationCommand {
 		Type:        discordgo.ChatApplicationCommand,
 		Name:        e.name,
 		Description: e.description,
-		Options:     e.applicationCommandOptions(),
+		Options:     e.data.ApplicationCommandOptions(),
 	}
 }
 
 func (e *Executor) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
-	o := make([]*discordgo.ApplicationCommandOption, 0, len(e.bindings))
-	for _, b := range e.bindings {
-		o = append(o, &discordgo.ApplicationCommandOption{
-			Type:         b.cType,
-			Name:         b.name,
-			Description:  b.description,
-			Required:     b.required,
-			Choices:      b.choices,
-			ChannelTypes: b.channelTypes,
-		})
-	}
-	return o
+	e.m.Lock()
+	defer e.m.Unlock()
+	return e.data.ApplicationCommandOptions()
 }

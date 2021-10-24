@@ -71,7 +71,7 @@ func reconstructPayload(d *Data, s *discordgo.Session, i *discordgo.InteractionC
 		case discordgo.ApplicationCommandOptionRole:
 			v = opt.RoleValue(s, i.GuildID)
 		case discordgo.ApplicationCommandOptionMentionable:
-			men := &diskoi.Mentionable{}
+			men := &mentionable.Mentionable{}
 			u, err := s.User(opt.Value.(string))
 			if err == nil {
 				men.User = u
