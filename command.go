@@ -6,8 +6,6 @@ import (
 )
 
 type CommandGroup struct {
-	//todo anti collision of SubcommandGroup and subcommandGroups
-	//todo max element count limit
 	name             string
 	description      string
 	subcommandGroups []*SubcommandGroup
