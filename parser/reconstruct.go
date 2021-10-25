@@ -8,6 +8,9 @@ import (
 	"reflect"
 )
 
+func reconstructCmd() {
+
+}
 func reconstructFunctionArgs(fnArg []*fnArgument, s *discordgo.Session, i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption) ([]reflect.Value, error) {
 	values := make([]reflect.Value, 0, len(fnArg))
@@ -35,11 +38,13 @@ func reconstructFunctionArgs(fnArg []*fnArgument, s *discordgo.Session, i *disco
 	}
 	return values, nil
 }
-func reconstructCommandArgument(d *Data, s *discordgo.Session, i *discordgo.InteractionCreate,
+
+func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument,
+	s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption, data *DiskoiData) (reflect.Value, error) {
-	val := reflect.New(d.cmdStruct).Elem()
+	val := reflect.New(cmdStruct).Elem()
 	for _, opt := range opts {
-		py := findPyArg(d.cmdArg, opt.Name)
+		py := findPyArg(cmdArg, opt.Name)
 		if py == nil {
 			return reflect.Value{}, errors.New(fmt.Sprintf("missing option %s with type %v", opt.Name, opt.Type))
 		}
@@ -103,7 +108,7 @@ func reconstructCommandArgument(d *Data, s *discordgo.Session, i *discordgo.Inte
 		fVal.Set(recVal)
 	}
 
-	for _, arg := range d.cmdSpecialArg {
+	for _, arg := range cmdSpecialArg {
 		fVal := val.FieldByIndex(arg.fieldIndex)
 		switch arg.dataType {
 		case cmdDataTypeDiskoiPath:

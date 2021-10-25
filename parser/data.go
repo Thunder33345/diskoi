@@ -32,7 +32,7 @@ func (d *Data) Execute(s *discordgo.Session, i *discordgo.InteractionCreate,
 	}
 
 	if d.cmdStruct != nil {
-		py, err := reconstructCommandArgument(d, s, i, opt, data)
+		py, err := reconstructCommandArgument(d.cmdStruct, d.cmdArg, d.cmdSpecialArg, s, i, opt, data)
 		if err != nil {
 			return errors.New(fmt.Sprintf("error reconstructing command argument %s: %s", d.cmdStruct.String(), err.Error()))
 		}
