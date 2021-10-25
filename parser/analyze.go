@@ -19,20 +19,39 @@ var (
 	rTypeCommandOptions = reflect.TypeOf((*CommandOptions)(nil)).Elem()
 )
 
-//Analyze analyzes the function, and returns Data that can be executed
-func Analyze(fn interface{}) (data *Data, error error) {
+//AnalyzeCmdFn analyzes the function, and returns Data that can be executed
+func AnalyzeCmdFn(fn interface{}) (data *Data, error error) { //todo use fmt.Errortf() instead of errors.New(fmt,Sprintf())
 	data = &Data{
 		fn: fn,
 	}
+	fnArgs, err := analyzeFunction(fn)
+	if err != nil {
+		return nil, fmt.Errorf("error analyzing function: %w", err)
+	}
+	data.fnArg = fnArgs
+
+	if len(fnArgs) >= 1 {
+		if arg := fnArgs[len(fnArgs)-1]; arg.typ == fnArgumentTypeData {
+			data.cmdStruct = arg.reflectTyp
+			data.cmdArg, data.cmdSpecialArg, err = analyzeCommandStruct(arg.reflectTyp, []int{})
+			if err != nil {
+				return nil, fmt.Errorf(`error analyzing command data(%s): %w`, arg.reflectTyp.String(), err)
+			}
+		}
+	}
+	return data, nil
+}
+
+func analyzeFunction(fn interface{}) ([]*fnArgument, error) {
 	typ := reflect.TypeOf(fn)
 	if typ.Kind() != reflect.Func {
-		return nil, errors.New(fmt.Sprintf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String()))
+		return nil, fmt.Errorf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String())
 	}
 	if typ.NumOut() != 0 {
-		return nil, errors.New(fmt.Sprintf("given function(%s) has %d outputs, expecting 0", signature(fn), typ.NumOut()))
+		return nil, fmt.Errorf("given function(%s) has %d outputs, expecting 0", signature(fn), typ.NumOut())
 	}
 
-	data.fnArg = make([]*fnArgument, 0, typ.NumIn())
+	fnArgs := make([]*fnArgument, 0, typ.NumIn())
 	for i := 0; i < typ.NumIn(); i++ {
 		fna := &fnArgument{}
 		at := typ.In(i)
@@ -55,30 +74,23 @@ func Analyze(fn interface{}) (data *Data, error error) {
 			}
 			fna.reflectTyp = at
 		default:
-			if i < typ.NumIn()-1 {
-				return nil, errors.New(fmt.Sprintf("unrecognized argument %s(#%d) on function, "+
-					"should be *discordgo.Session, *discordgo.InteractionCreate or something that implement diskoi.Unmarshal", original.String(), i))
+			if i < typ.NumIn()-1 { //maybe some day data struct won't have to be the last arg
+				return nil, fmt.Errorf("unrecognized argument %s(#%d) on function, "+
+					"should be *discordgo.Session, *discordgo.InteractionCreate or something that implement diskoi.Unmarshal", original.String(), i)
 			}
 			if at.Kind() == reflect.Ptr {
 				at = at.Elem()
 			}
 			if at.Kind() != reflect.Struct {
-				return nil, errors.New(fmt.Sprintf("unrecognized argument %s(#%d) on function,"+
-					"should be a struct", original.String(), i))
+				return nil, fmt.Errorf("unrecognized argument %s(#%d) on function,"+
+					"should be a struct", original.String(), i)
 			}
-			py, pys, err := analyzeCommandStruct(at, []int{})
-			if err != nil {
-				return nil, errors.New(fmt.Sprintf("error parsing command data(%s): %v", original.String(), err))
-			}
-			data.cmdStruct = at
-			data.cmdArg = py
-			data.cmdSpecialArg = pys
-			return data, nil
+			fna.typ = fnArgumentTypeData
+			fna.reflectTyp = at
 		}
-		data.fnArg = append(data.fnArg, fna)
+		fnArgs = append(fnArgs, fna)
 	}
-
-	return data, nil
+	return fnArgs, nil
 }
 
 //analyzeCommandStruct analyzes a struct and create slice of CommandArgument and specialArgument

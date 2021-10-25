@@ -17,6 +17,7 @@ const (
 	fnArgumentTypeInvalid fnArgumentType = iota
 	fnArgumentTypeSession
 	fnArgumentTypeInteraction
+	fnArgumentTypeData
 	fnArgumentTypeMarshal
 	fnArgumentTypeMarshalPtr
 )

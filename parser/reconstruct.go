@@ -8,10 +8,8 @@ import (
 	"reflect"
 )
 
-func reconstructCmd() {
-
-}
-func reconstructFunctionArgs(fnArg []*fnArgument, s *discordgo.Session, i *discordgo.InteractionCreate,
+func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument, data *DiskoiData,
+	s *discordgo.Session, i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption) ([]reflect.Value, error) {
 	values := make([]reflect.Value, 0, len(fnArg))
 	for _, arg := range fnArg {
@@ -25,15 +23,21 @@ func reconstructFunctionArgs(fnArg []*fnArgument, s *discordgo.Session, i *disco
 			m := mt.Interface().(Unmarshal)
 			err := m.UnmarshalDiskoi(s, i, o)
 			if err != nil {
-				return nil, errors.New(fmt.Sprintf("error unmarshalling %s: %s", arg.reflectTyp.String(), err.Error()))
+				return nil, fmt.Errorf("error unmarshalling %s: %w", arg.reflectTyp.String(), err)
 			}
 			if arg.typ == fnArgumentTypeMarshalPtr {
 				values = append(values, reflect.ValueOf(m))
 			} else {
 				values = append(values, reflect.ValueOf(m).Elem())
 			}
+		case fnArgumentTypeData:
+			v, err := reconstructCommandArgument(arg.reflectTyp, cmdArg, cmdSpecialArg, s, i, o, data)
+			if err != nil {
+				return nil, fmt.Errorf(`error reconstructing command data "%s": %w`, arg.reflectTyp.String(), err)
+			}
+			values = append(values, v)
 		default:
-			return nil, errors.New(fmt.Sprintf("unrecognized argument type #%d (%s)", uint(arg.typ), arg.typ.String()))
+			return nil, fmt.Errorf("unrecognized argument type #%d (%s)", uint(arg.typ), arg.typ.String())
 		}
 	}
 	return values, nil

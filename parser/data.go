@@ -1,13 +1,12 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"reflect"
 )
 
-//Data is an analysis produced by Analyze
+//Data is an analysis produced by AnalyzeCmdFn
 //It contains everything needed to reconstruct and call it back
 //todo rename this Data feels too vague, maybe CommandData
 type Data struct {
@@ -26,20 +25,12 @@ type Data struct {
 
 func (d *Data) Execute(s *discordgo.Session, i *discordgo.InteractionCreate,
 	opt []*discordgo.ApplicationCommandInteractionDataOption, data *DiskoiData) error {
-	args, err := reconstructFunctionArgs(d.fnArg, s, i, opt)
+	values, err := reconstructFunctionArgs(d.fnArg, d.cmdArg, d.cmdSpecialArg, data, s, i, opt)
 	if err != nil {
-		return errors.New(fmt.Sprintf("error reconstructing arguments: %s", err.Error()))
-	}
-
-	if d.cmdStruct != nil {
-		py, err := reconstructCommandArgument(d.cmdStruct, d.cmdArg, d.cmdSpecialArg, s, i, opt, data)
-		if err != nil {
-			return errors.New(fmt.Sprintf("error reconstructing command argument %s: %s", d.cmdStruct.String(), err.Error()))
-		}
-		args = append(args, py)
+		return fmt.Errorf("error reconstructing command: %w", err)
 	}
 	fn := reflect.ValueOf(d.fn)
-	fn.Call(args)
+	fn.Call(values)
 	return nil
 }
 
