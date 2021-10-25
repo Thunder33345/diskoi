@@ -3,7 +3,6 @@ package parser
 import (
 	"diskoi/mentionable"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"reflect"
@@ -101,15 +100,15 @@ func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*CommandArgument, []*s
 		f := typ.Field(i)
 		pos := append(append(make([]int, 0, len(pre)+1), pre...), i)
 		if !f.IsExported() {
-			return nil, nil, errors.New(fmt.Sprintf(`unsupported unexported field in "%s.%s"`, typ.String(), f.Name))
+			return nil, nil, fmt.Errorf(`unsupported unexported field in "%s.%s"`, typ.String(), f.Name)
 		}
 		if f.Anonymous {
 			if f.Type.Kind() == reflect.Ptr {
-				return nil, nil, errors.New(fmt.Sprintf(`unsupported pointered anonymous field in "%s.%s"`, typ.String(), f.Name))
+				return nil, nil, fmt.Errorf(`unsupported pointered anonymous field in "%s.%s"`, typ.String(), f.Name)
 			}
 			a, s, err := analyzeCommandStruct(f.Type, pos)
 			if err != nil {
-				return nil, nil, errors.New(fmt.Sprintf(`in "%s": %s`, typ.String(), err.Error()))
+				return nil, nil, fmt.Errorf(`in "%s": %w`, typ.String(), err)
 			}
 			cmdArgs = append(cmdArgs, a...)
 			spcArgs = append(spcArgs, s...)
@@ -118,7 +117,7 @@ func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*CommandArgument, []*s
 
 		py, pys, err := analyzeCommandArgumentField(f)
 		if err != nil {
-			return nil, nil, errors.New(fmt.Sprintf(`failed parsing struct field on "%s.%s": %s`, typ.String(), f.Name, err.Error()))
+			return nil, nil, fmt.Errorf(`failed parsing struct field on "%s.%s": %w`, typ.String(), f.Name, err)
 		}
 		if py != nil {
 			py.fieldIndex = pos
@@ -152,7 +151,7 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 
 		allEntries, err := r.ReadAll()
 		if err != nil {
-			return nil, nil, errors.New(fmt.Sprintf(`error parsing tag: %s`, err.Error()))
+			return nil, nil, fmt.Errorf(`error parsing tag: %s`, err.Error())
 		}
 		for _, subEntry := range allEntries {
 			for _, ent := range subEntry {
@@ -180,14 +179,14 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 						sp.dataType = cmdDataTypeDiskoiPath
 
 						if f.Type.Kind() != reflect.Slice || f.Type.Elem().Kind() != reflect.String {
-							return nil, nil, errors.New(fmt.Sprintf(`invalid reciever type "%s" on special:path tag`, f.Type.String()))
+							return nil, nil, fmt.Errorf(`invalid reciever type "%s" on special:path tag`, f.Type.String())
 						}
 					default:
-						return nil, nil, errors.New(fmt.Sprintf("unrecognized special tag with value \"%s\"", value))
+						return nil, nil, fmt.Errorf("unrecognized special tag with value \"%s\"", value)
 					}
 					return nil, sp, nil
 				default:
-					return nil, nil, errors.New(fmt.Sprintf("unrecognized tag \"%s\" with value \"%s\"", key, value))
+					return nil, nil, fmt.Errorf("unrecognized tag \"%s\" with value \"%s\"", key, value)
 				}
 			}
 		}
@@ -230,10 +229,10 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 		case elmT == reflect.TypeOf(mentionable.Mentionable{}):
 			arg.cType = discordgo.ApplicationCommandOptionMentionable
 		default:
-			return nil, nil, errors.New(fmt.Sprintf(`unrecognized struct "%s"`, f.Type.String()))
+			return nil, nil, fmt.Errorf(`unrecognized struct "%s"`, f.Type.String())
 		}
 	default:
-		return nil, nil, errors.New(fmt.Sprintf(`unsupported kind "%s"`, f.Type.String()))
+		return nil, nil, fmt.Errorf(`unsupported kind "%s"`, f.Type.String())
 	}
 	return arg, nil, nil
 }

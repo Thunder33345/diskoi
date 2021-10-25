@@ -2,7 +2,6 @@ package parser
 
 import (
 	"diskoi/mentionable"
-	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"reflect"
@@ -50,11 +49,11 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgumen
 	for _, opt := range opts {
 		py := findPyArg(cmdArg, opt.Name)
 		if py == nil {
-			return reflect.Value{}, errors.New(fmt.Sprintf("missing option %s with type %v", opt.Name, opt.Type))
+			return reflect.Value{}, fmt.Errorf("missing option %s with type %v", opt.Name, opt.Type)
 		}
 		if py.cType != opt.Type {
-			return reflect.Value{}, errors.New(fmt.Sprintf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
-				py.fieldName, py.cType, opt.Type))
+			return reflect.Value{}, fmt.Errorf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
+				py.fieldName, py.cType, opt.Type)
 		}
 		fVal := val.FieldByIndex(py.fieldIndex)
 		var v interface{}
@@ -95,7 +94,7 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgumen
 			}
 			v = men
 		default:
-			return reflect.Value{}, errors.New(fmt.Sprintf("unrecognized ApplicationCommandOptionType %v in %s", opt.Type, py.fieldName))
+			return reflect.Value{}, fmt.Errorf("unrecognized ApplicationCommandOptionType %v in %s", opt.Type, py.fieldName)
 		}
 		recVal := reflect.ValueOf(v)
 		if fVal.Kind() != reflect.Ptr {
@@ -105,8 +104,8 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgumen
 			if recVal.CanConvert(fVal.Type()) {
 				recVal = recVal.Convert(fVal.Type())
 			} else {
-				return reflect.Value{}, errors.New(fmt.Sprintf(`cant convert %s(%v) into %s(%v)`,
-					recVal.Type().String(), recVal.Type().Kind(), fVal.Type().String(), fVal.Type().Kind()))
+				return reflect.Value{}, fmt.Errorf(`cant convert %s(%v) into %s(%v)`,
+					recVal.Type().String(), recVal.Type().Kind(), fVal.Type().String(), fVal.Type().Kind())
 			}
 		}
 		fVal.Set(recVal)
@@ -118,7 +117,7 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgumen
 		case cmdDataTypeDiskoiPath:
 			fVal.Set(reflect.ValueOf(data.Path))
 		default:
-			return reflect.Value{}, errors.New(fmt.Sprintf("unrecognized specialArgType %v in %s", arg.dataType, arg.fieldName))
+			return reflect.Value{}, fmt.Errorf("unrecognized specialArgType %v in %s", arg.dataType, arg.fieldName)
 		}
 	}
 	return val, nil
