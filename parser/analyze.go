@@ -13,10 +13,10 @@ import (
 var (
 	rTypeSession         = reflect.TypeOf((*discordgo.Session)(nil))
 	rTypeInteractCreate  = reflect.TypeOf((*discordgo.InteractionCreate)(nil))
-	rTypeAppCmdOptChoice = reflect.TypeOf([]*discordgo.ApplicationCommandOptionChoice(nil))
-	rTypeUnmarshal       = reflect.TypeOf((*Unmarshal)(nil)).Elem() //todo prefix I for interface types
-	rTypeChannelType     = reflect.TypeOf((*ChannelType)(nil)).Elem()
-	rTypeCommandOptions  = reflect.TypeOf((*CommandOptions)(nil)).Elem()
+	rTypeCommandOptions  = reflect.TypeOf([]*discordgo.ApplicationCommandOptionChoice(nil))
+	rTypeIUnmarshal      = reflect.TypeOf((*Unmarshal)(nil)).Elem()
+	rTypeIChannelType    = reflect.TypeOf((*ChannelType)(nil)).Elem()
+	rTypeICommandOptions = reflect.TypeOf((*CommandOptions)(nil)).Elem()
 )
 
 //AnalyzeCmdFn analyzes the function, and returns Data that can be executed
@@ -65,7 +65,7 @@ func analyzeFunction(fn interface{}) ([]*fnArgument, error) {
 			fna.typ = fnArgumentTypeSession
 		case at == rTypeInteractCreate:
 			fna.typ = fnArgumentTypeInteraction
-		case atp.Implements(rTypeUnmarshal):
+		case atp.Implements(rTypeIUnmarshal):
 			if at.Kind() == reflect.Ptr {
 				fna.typ = fnArgumentTypeMarshalPtr
 				at = at.Elem()
@@ -103,9 +103,9 @@ func analyzeAutocompleteFunction(fn interface{}, expTyp reflect.Type) ([]*fnArgu
 		return nil, fmt.Errorf("given function(%s) has %d outputs, expecting 1", signature(fn), typ.NumOut())
 	}
 
-	if typ.Out(0) != rTypeAppCmdOptChoice {
+	if typ.Out(0) != rTypeCommandOptions {
 		return nil, fmt.Errorf(`given function(%s) should output "%s" not %s`,
-			signature(fn), rTypeAppCmdOptChoice.String(), typ.Out(1).String())
+			signature(fn), rTypeCommandOptions.String(), typ.Out(1).String())
 	}
 
 	fnArgs := make([]*fnArgument, 0, typ.NumIn()) //todo split this into it's own function
@@ -122,7 +122,7 @@ func analyzeAutocompleteFunction(fn interface{}, expTyp reflect.Type) ([]*fnArgu
 			fna.typ = fnArgumentTypeSession
 		case at == rTypeInteractCreate:
 			fna.typ = fnArgumentTypeInteraction
-		case atp.Implements(rTypeUnmarshal):
+		case atp.Implements(rTypeIUnmarshal):
 			if at.Kind() == reflect.Ptr {
 				fna.typ = fnArgumentTypeMarshalPtr
 				at = at.Elem()
@@ -249,12 +249,12 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 		}
 	}
 
-	if f.Type.Implements(rTypeChannelType) {
+	if f.Type.Implements(rTypeIChannelType) {
 		v := reflect.New(f.Type)
 		ch := v.Interface().(ChannelType)
 		arg.ChannelTypes = ch.DiskoiChannelTypes()
 	}
-	if f.Type.Implements(rTypeCommandOptions) {
+	if f.Type.Implements(rTypeICommandOptions) {
 		v := reflect.New(f.Type)
 		ch := v.Interface().(CommandOptions)
 		arg.Choices = ch.DiskoiCommandOptions()

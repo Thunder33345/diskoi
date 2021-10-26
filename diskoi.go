@@ -7,7 +7,6 @@ import (
 )
 
 type Diskoi struct {
-	//idea branch for autocomplete with https://github.com/bwmarrin/discordgo/pull/1014
 	//idea maybe syncHandling option for go execute
 	s                 *discordgo.Session
 	remover           func()
