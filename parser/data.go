@@ -36,36 +36,13 @@ func (d *Data) Execute(s *discordgo.Session, i *discordgo.InteractionCreate,
 
 func (d *Data) Autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption, data *DiskoiData) ([]*discordgo.ApplicationCommandOptionChoice, error) {
-	//todo move this method into a func
-	find := func(name string) *CommandArgument {
-		for _, arg := range d.cmdArg {
-			if arg.Name == name {
-				return arg
-			}
-		}
-		return nil
+	arg, values, err := reconstructAutocompleteArgs(d.cmdArg, d.cmdSpecialArg, data, s, i, opts)
+	if err != nil {
+		return nil, fmt.Errorf("error autocompleting command: %w", err)
 	}
-	for _, opt := range opts {
-		if !opt.Focused {
-			continue
-		}
-		arg := find(opt.Name)
-		if arg == nil {
-			return nil, fmt.Errorf("missing option %s with type %v", opt.Name, opt.Type)
-		}
-		if arg.cType != opt.Type {
-			return nil, fmt.Errorf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
-				arg.fieldName, arg.cType, opt.Type)
-		}
-		values, err := reconstructFunctionArgs(arg.autocompleteArgs, d.cmdArg, d.cmdSpecialArg, data, s, i, opts)
-		if err != nil {
-			return nil, fmt.Errorf("error reconstructing autocomplete: %w", err)
-		}
-		rets := reflect.ValueOf(arg.autocompleteFn).Call(values)
-		optChoice := rets[0].Interface().([]*discordgo.ApplicationCommandOptionChoice)
-		return optChoice, nil
-	}
-	return nil, fmt.Errorf("no options in focus")
+	rets := reflect.ValueOf(arg.autocompleteFn).Call(values)
+	optChoice := rets[0].Interface().([]*discordgo.ApplicationCommandOptionChoice)
+	return optChoice, nil
 }
 
 func (d *Data) AddAutoComplete(fieldName string, fn interface{}) error {

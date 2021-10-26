@@ -41,7 +41,37 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*CommandArgument, cmd
 	}
 	return values, nil
 }
-
+func reconstructAutocompleteArgs(cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument, data *DiskoiData,
+	s *discordgo.Session, i *discordgo.InteractionCreate,
+	opts []*discordgo.ApplicationCommandInteractionDataOption) (*CommandArgument, []reflect.Value, error) {
+	find := func(name string) *CommandArgument {
+		for _, arg := range cmdArg {
+			if arg.Name == name {
+				return arg
+			}
+		}
+		return nil
+	}
+	for _, opt := range opts {
+		if !opt.Focused {
+			continue
+		}
+		arg := find(opt.Name)
+		if arg == nil {
+			return nil, nil, fmt.Errorf("missing option %s with type %v", opt.Name, opt.Type)
+		}
+		if arg.cType != opt.Type {
+			return nil, nil, fmt.Errorf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
+				arg.fieldName, arg.cType, opt.Type)
+		}
+		values, err := reconstructFunctionArgs(arg.autocompleteArgs, cmdArg, cmdSpecialArg, data, s, i, opts)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error reconstructing autocomplete: %w", err)
+		}
+		return arg, values, nil
+	}
+	return nil, nil, fmt.Errorf("no options in focus")
+}
 func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption, data *DiskoiData) (reflect.Value, error) {
