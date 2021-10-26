@@ -72,7 +72,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
 			return
 		}
-		opts, err := executor.Autocomplete(s, i, options, &parser.DiskoiData{Path: path})
+		opts, err := executor.autocomplete(s, i, options, &parser.DiskoiData{Path: path})
 		if err != nil {
 			d.getErrorHandler()(s, i, e, CommandExecutionError{err: err}) //todo change types
 		}
