@@ -48,8 +48,8 @@ type CommandArgument struct {
 	Choices      []*discordgo.ApplicationCommandOptionChoice
 	ChannelTypes []discordgo.ChannelType
 
-	//autocomplete is unimplemented
-	autocomplete interface{}
+	autocompleteFn   interface{}
+	autocompleteArgs []*fnArgument
 }
 
 type specialArgument struct {

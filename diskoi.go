@@ -24,6 +24,8 @@ func NewDiskoi() *Diskoi {
 		commandsGuild:     map[string][]Command{},
 		registeredCommand: map[string]Command{},
 		m:                 sync.Mutex{},
+		errorHandler:      func(s *discordgo.Session, i *discordgo.InteractionCreate, cmd Command, err error) {},
+		rawHandler:        func(session *discordgo.Session, create *discordgo.InteractionCreate) {},
 	}
 }
 
@@ -35,27 +37,55 @@ func (d *Diskoi) RegisterSession(s *discordgo.Session) {
 }
 
 func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.Type != discordgo.InteractionApplicationCommand ||
-		i.Data.Type() != discordgo.InteractionApplicationCommand {
-		return
-	}
-	id, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
-	if !ok {
-		return
-	}
-	e := d.findRegisteredCmdById(id.ID)
-	if e == nil {
-		d.getRawHandler()(s, i)
-		return
-	}
-	executor, options, path, err := e.executor(id)
-	if err != nil {
-		d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
-		return
-	}
-	err = executor.execute(s, i, options, &parser.DiskoiData{Path: path})
-	if err != nil {
-		d.getErrorHandler()(s, i, e, CommandExecutionError{err: err})
+	switch {
+	case i.Type == discordgo.InteractionApplicationCommand && i.Data.Type() == discordgo.InteractionApplicationCommand:
+		id, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
+		if !ok {
+			return
+		}
+		e := d.findRegisteredCmdById(id.ID)
+		if e == nil {
+			d.getRawHandler()(s, i)
+			return
+		}
+		executor, options, path, err := e.executor(id)
+		if err != nil {
+			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
+			return
+		}
+		err = executor.execute(s, i, options, &parser.DiskoiData{Path: path})
+		if err != nil {
+			d.getErrorHandler()(s, i, e, CommandExecutionError{err: err})
+		}
+	case i.Type == discordgo.InteractionApplicationCommandAutocomplete &&
+		i.Data.Type() == discordgo.InteractionApplicationCommand:
+		id, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
+		if !ok {
+			return
+		}
+		e := d.findRegisteredCmdById(id.ID)
+		if e == nil {
+			d.getRawHandler()(s, i)
+			return
+		}
+		executor, options, path, err := e.executor(id)
+		if err != nil {
+			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
+			return
+		}
+		opts, err := executor.Autocomplete(s, i, options, &parser.DiskoiData{Path: path})
+		if err != nil {
+			d.getErrorHandler()(s, i, e, CommandExecutionError{err: err}) //todo change types
+		}
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+			Data: &discordgo.InteractionResponseData{
+				Choices: opts,
+			},
+		})
+		if err != nil {
+			d.getErrorHandler()(s, i, e, CommandExecutionError{err: err}) //todo change types
+		}
 	}
 }
 

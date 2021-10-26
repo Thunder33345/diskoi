@@ -35,9 +35,57 @@ func (d *Data) Execute(s *discordgo.Session, i *discordgo.InteractionCreate,
 }
 
 func (d *Data) Autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,
-	options []*discordgo.ApplicationCommandInteractionDataOption, data DiskoiData) error {
-	//todo scaffold for autocompletion
-	panic("TODO: Autocomplete")
+	opts []*discordgo.ApplicationCommandInteractionDataOption, data *DiskoiData) ([]*discordgo.ApplicationCommandOptionChoice, error) {
+	//todo move this method into a func
+	find := func(name string) *CommandArgument {
+		for _, arg := range d.cmdArg {
+			if arg.Name == name {
+				return arg
+			}
+		}
+		return nil
+	}
+	for _, opt := range opts {
+		if !opt.Focused {
+			continue
+		}
+		arg := find(opt.Name)
+		if arg == nil {
+			panic("option cant be found")
+		}
+		values, err := reconstructFunctionArgs(arg.autocompleteArgs, d.cmdArg, d.cmdSpecialArg, data, s, i, opts)
+		if err != nil {
+			panic("cant reconstruct thing")
+		}
+		rets := reflect.ValueOf(arg.autocompleteFn).Call(values)
+		optChoice := rets[0].Interface().([]*discordgo.ApplicationCommandOptionChoice)
+		return optChoice, nil
+	}
+	panic("TODO: panic for otherwise unreachable statement") //todo return unreachable error
+}
+
+func (d *Data) AddAutoComplete(fieldName string, fn interface{}) error {
+	find := func() *CommandArgument {
+		for _, arg := range d.cmdArg {
+			if arg.fieldName == fieldName {
+				return arg
+			}
+		}
+		return nil
+	}
+	arg := find()
+	if arg == nil {
+		//todo error not found
+	}
+
+	fnArgs, err := analyzeAutocompleteFunction(fn, d.cmdStruct) //todo use a diff analyzer since it needs returns of autocomplete results
+	if err != nil {
+		return fmt.Errorf("error analyzing autocomplete function: %w", err)
+	}
+
+	arg.autocompleteFn = fn
+	arg.autocompleteArgs = fnArgs
+	return nil
 }
 
 func (d *Data) ApplicationCommandOptions() []*discordgo.ApplicationCommandOption {
@@ -50,6 +98,7 @@ func (d *Data) ApplicationCommandOptions() []*discordgo.ApplicationCommandOption
 			Required:     b.Required,
 			Choices:      b.Choices,
 			ChannelTypes: b.ChannelTypes,
+			Autocomplete: b.autocompleteFn != nil,
 		})
 	}
 	return o

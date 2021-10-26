@@ -93,6 +93,14 @@ func (e *Executor) execute(
 	return nil
 }
 
+func (e *Executor) Autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,
+	opts []*discordgo.ApplicationCommandInteractionDataOption, data *parser.DiskoiData) ([]*discordgo.ApplicationCommandOptionChoice, error) {
+	return e.data.Autocomplete(s, i, opts, data)
+}
+func (e *Executor) AddAutoComplete(fieldName string, fn interface{}) error {
+	return e.data.AddAutoComplete(fieldName, fn)
+}
+
 func (e *Executor) applicationCommand() *discordgo.ApplicationCommand {
 	e.m.Lock()
 	defer e.m.Unlock()
