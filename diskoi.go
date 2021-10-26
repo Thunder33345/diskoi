@@ -54,7 +54,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 		err = executor.execute(s, i, options, &parser.DiskoiData{Path: path})
 		if err != nil {
-			d.getErrorHandler()(s, i, e, CommandExecutionError{err: err})
+			d.getErrorHandler()(s, i, e, CommandExecutionError{name: executor.name, err: err})
 		}
 	case i.Type == discordgo.InteractionApplicationCommandAutocomplete &&
 		i.Data.Type() == discordgo.InteractionApplicationCommand:
@@ -74,7 +74,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 		opts, err := executor.autocomplete(s, i, options, &parser.DiskoiData{Path: path})
 		if err != nil {
-			d.getErrorHandler()(s, i, e, CommandExecutionError{err: err}) //todo change types
+			d.getErrorHandler()(s, i, e, AutocompleteExecutionError{name: executor.name, err: err})
 		}
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
@@ -83,7 +83,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			},
 		})
 		if err != nil {
-			d.getErrorHandler()(s, i, e, CommandExecutionError{err: err}) //todo change types
+			d.getErrorHandler()(s, i, e, DiscordAPIError{err: err})
 		}
 	}
 }

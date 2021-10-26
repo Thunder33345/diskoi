@@ -2,7 +2,6 @@ package diskoi
 
 import (
 	"diskoi/parser"
-	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"sync"
@@ -26,7 +25,7 @@ func NewExecutor(name string, description string, fn interface{}) (*Executor, er
 	}
 	data, err := parser.AnalyzeCmdFn(fn)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf(`failed to parse command "%s": %v`, name, err))
+		return nil, fmt.Errorf(`failed to parse command "%s": %w`, name, err)
 	}
 	e.data = data
 	return &e, nil
@@ -35,7 +34,7 @@ func NewExecutor(name string, description string, fn interface{}) (*Executor, er
 func MustNewExecutor(name string, description string, fn interface{}) *Executor {
 	executor, err := NewExecutor(name, description, fn)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("error creating executor named %s: %w", name, err))
 	}
 	return executor
 }
@@ -65,7 +64,7 @@ func (e *Executor) execute(
 ) error {
 	err := e.data.Execute(s, i, o, dd)
 	if err != nil {
-		return errors.New(fmt.Sprintf("error running command %s: %v", e.name, err))
+		return fmt.Errorf("error running command %s: %w", e.name, err)
 	}
 	return nil
 }

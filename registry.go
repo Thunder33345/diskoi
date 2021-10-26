@@ -12,7 +12,7 @@ func (d *Diskoi) RegisterCommands() error {
 	f := func(c Command, g string) error {
 		cc, err := s.ApplicationCommandCreate(s.State.User.ID, g, c.applicationCommand())
 		if err != nil {
-			return err
+			return DiscordAPIError{err: err}
 		}
 		d.registeredCommand[cc.ID] = c
 		return nil
@@ -40,7 +40,7 @@ func (d *Diskoi) SyncCommands() error {
 	f := func(guild string, cs []Command) error {
 		rc, err := d.s.ApplicationCommands(d.s.State.User.ID, guild)
 		if err != nil {
-			return err
+			return DiscordAPIError{err: err}
 		}
 		cMap := make(map[string]*discordgo.ApplicationCommand, len(rc))
 		for _, cmd := range rc {
@@ -65,7 +65,7 @@ func (d *Diskoi) SyncCommands() error {
 			}
 			cc, err := d.s.ApplicationCommandCreate(d.s.State.User.ID, guild, eac)
 			if err != nil {
-				return err
+				return DiscordAPIError{err: err}
 			}
 			d.registeredCommand[cc.ID] = c
 		}
@@ -75,7 +75,7 @@ func (d *Diskoi) SyncCommands() error {
 			if !ok {
 				err = d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, cmd.ID)
 				if err != nil {
-					return err
+					return DiscordAPIError{err: err}
 				}
 			}
 		}
@@ -102,7 +102,7 @@ func (d *Diskoi) UnregisterCommands() error {
 	for id := range d.registeredCommand {
 		err := s.ApplicationCommandDelete(s.State.User.ID, "735145518220443680", id)
 		if err != nil {
-			return err
+			return DiscordAPIError{err: err}
 		}
 		delete(d.registeredCommand, id)
 	}
@@ -165,7 +165,7 @@ func (d *Diskoi) RemoveGuildCommand(guild string, cmd Command) error {
 		if cmd == e2 {
 			err := d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, id)
 			if err != nil {
-				return err
+				return DiscordAPIError{err: err}
 			}
 		}
 	}

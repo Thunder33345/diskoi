@@ -51,7 +51,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 		group, _ = c.findGroup(target.Name)
 		path = append(path, target.Name)
 		if group == nil {
-			return nil, nil, nil, MissingSubcommandGroupError{name: target.Name, path: path}
+			return nil, nil, nil, MissingSubcommandError{name: target.Name, path: path, isGroup: true}
 		}
 		//if so we unwrap options to get the actual name
 		target = target.Options[0]
@@ -66,7 +66,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	if sub != nil {
 		return sub, target.Options, path, nil
 	}
-	return nil, nil, nil, MissingSubcommandError{name: target.Name, path: path}
+	return nil, nil, nil, MissingSubcommandError{name: target.Name, path: path, isGroup: false}
 }
 
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand {

@@ -1,6 +1,7 @@
 package diskoi
 
 import (
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"strings"
 )
@@ -10,7 +11,7 @@ type CommandParsingError struct {
 }
 
 func (e CommandParsingError) Error() string {
-	return "Command Parsing Error: " + e.err.Error()
+	return "command parsing error: " + e.err.Error()
 }
 
 func (e *CommandParsingError) Unwrap() error {
@@ -22,7 +23,7 @@ type MissingOptionsError struct {
 }
 
 func (e MissingOptionsError) Error() string {
-	return "Missing options(possible api de-sync?): expecting options given for command group, none given for" + errPath(e.path)
+	return "missing options(possible api de-sync?): expecting options given for command group, none given for" + errPath(e.path)
 }
 
 type NonCommandOptionTypeError struct {
@@ -31,37 +32,46 @@ type NonCommandOptionTypeError struct {
 }
 
 func (e NonCommandOptionTypeError) Error() string {
-	return "Non command option type(possible api de-sync?): expecting \"SubCommand\" or \"SubCommandGroup\" command option type" +
+	return "non command option type(possible api de-sync?): expecting \"SubCommand\" or \"SubCommandGroup\" command option type" +
 		" but received \"" + e.ty.String() + "\" for" + errPath(e.path)
 }
 
-type MissingSubcommandGroupError struct {
-	name string
-	path []string
-}
-
-func (e MissingSubcommandGroupError) Error() string {
-	return "Missing Subcommand group: group \"" + e.name + "\" not found on" + errPath(e.path)
-}
-
 type MissingSubcommandError struct {
-	name string
-	path []string
+	name    string
+	path    []string
+	isGroup bool
 }
 
 func (e MissingSubcommandError) Error() string {
-	return "Missing Subcommand: subcommand \"" + e.name + "\" not found on" + errPath(e.path)
+	if e.isGroup {
+		return "missing subcommand group: group \"" + e.name + "\" not found on" + errPath(e.path)
+	}
+	return "missing subcommand: subcommand \"" + e.name + "\" not found on" + errPath(e.path)
 }
 
 type CommandExecutionError struct {
-	err error
+	name string
+	err  error
 }
 
 func (e CommandExecutionError) Error() string {
-	return "" + e.err.Error()
+	return fmt.Sprintf(`error executing command for "%s": %v`, e.name, e.err)
 }
 
 func (e CommandExecutionError) Unwrap() error {
+	return e.err
+}
+
+type AutocompleteExecutionError struct {
+	name string
+	err  error
+}
+
+func (e AutocompleteExecutionError) Error() string {
+	return fmt.Sprintf(`error executing autocomplete for "%s": %v`, e.name, e.err)
+}
+
+func (e AutocompleteExecutionError) Unwrap() error {
 	return e.err
 }
 
@@ -70,7 +80,19 @@ type MissingBindingsError struct {
 }
 
 func (e MissingBindingsError) Error() string {
-	return "Missing bindings for " + e.name
+	return "missing bindings for " + e.name
+}
+
+type DiscordAPIError struct {
+	err error
+}
+
+func (e DiscordAPIError) Error() string {
+	return fmt.Sprintf(`discord api error: %v`, e.err)
+}
+
+func (e DiscordAPIError) Unwrap() error {
+	return e.err
 }
 
 func errPath(path []string) string {
