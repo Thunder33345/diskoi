@@ -51,6 +51,27 @@ func analyzeFunction(fn interface{}) ([]*fnArgument, error) {
 		return nil, fmt.Errorf("given function(%s) has %d outputs, expecting 0", signature(fn), typ.NumOut())
 	}
 
+	return analyzeFunctionArgument(typ, nil)
+}
+
+func analyzeAutocompleteFunction(fn interface{}, expTyp reflect.Type) ([]*fnArgument, error) {
+	typ := reflect.TypeOf(fn)
+	if typ.Kind() != reflect.Func {
+		return nil, fmt.Errorf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String())
+	}
+	if typ.NumOut() != 1 {
+		return nil, fmt.Errorf("given function(%s) has %d outputs, expecting 1", signature(fn), typ.NumOut())
+	}
+
+	if typ.Out(0) != rTypeCommandOptions {
+		return nil, fmt.Errorf(`given function(%s) should output "%s" not %s`,
+			signature(fn), rTypeCommandOptions.String(), typ.Out(1).String())
+	}
+
+	return analyzeFunctionArgument(typ, expTyp)
+}
+
+func analyzeFunctionArgument(typ reflect.Type, expected reflect.Type) ([]*fnArgument, error) {
 	fnArgs := make([]*fnArgument, 0, typ.NumIn())
 	for i := 0; i < typ.NumIn(); i++ {
 		fna := &fnArgument{}
@@ -81,65 +102,8 @@ func analyzeFunction(fn interface{}) ([]*fnArgument, error) {
 			if at.Kind() == reflect.Ptr {
 				at = at.Elem()
 			}
-			if at.Kind() != reflect.Struct {
-				return nil, fmt.Errorf("unrecognized argument %s(#%d) on function,"+
-					"should be a struct", original.String(), i)
-			}
-			fna.typ = fnArgumentTypeData
-			fna.reflectTyp = at
-		}
-		fnArgs = append(fnArgs, fna)
-	}
-	return fnArgs, nil
-}
-
-func analyzeAutocompleteFunction(fn interface{}, expTyp reflect.Type) ([]*fnArgument, error) {
-	//todo consolidate duplicated code
-	typ := reflect.TypeOf(fn)
-	if typ.Kind() != reflect.Func {
-		return nil, fmt.Errorf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String())
-	}
-	if typ.NumOut() != 1 {
-		return nil, fmt.Errorf("given function(%s) has %d outputs, expecting 1", signature(fn), typ.NumOut())
-	}
-
-	if typ.Out(0) != rTypeCommandOptions {
-		return nil, fmt.Errorf(`given function(%s) should output "%s" not %s`,
-			signature(fn), rTypeCommandOptions.String(), typ.Out(1).String())
-	}
-
-	fnArgs := make([]*fnArgument, 0, typ.NumIn()) //todo split this into it's own function
-	for i := 0; i < typ.NumIn(); i++ {
-		fna := &fnArgument{}
-		at := typ.In(i)
-		original := at
-		atp := at
-		if atp.Kind() != reflect.Ptr {
-			atp = reflect.PtrTo(at)
-		}
-		switch {
-		case at == rTypeSession:
-			fna.typ = fnArgumentTypeSession
-		case at == rTypeInteractCreate:
-			fna.typ = fnArgumentTypeInteraction
-		case atp.Implements(rTypeIUnmarshal):
-			if at.Kind() == reflect.Ptr {
-				fna.typ = fnArgumentTypeMarshalPtr
-				at = at.Elem()
-			} else {
-				fna.typ = fnArgumentTypeMarshal
-			}
-			fna.reflectTyp = at
-		default:
-			if i < typ.NumIn()-1 { //maybe some day data struct won't have to be the last arg
-				return nil, fmt.Errorf("unrecognized argument %s(#%d) on function, "+
-					"should be *discordgo.Session, *discordgo.InteractionCreate or something that implement diskoi.Unmarshal", original.String(), i)
-			}
-			if at.Kind() == reflect.Ptr {
-				at = at.Elem()
-			}
-			if at != expTyp {
-				return nil, fmt.Errorf(`unexpected data struct type should be "%s" not "%s"`, expTyp.String(), at.String())
+			if expected != nil && at != expected {
+				return nil, fmt.Errorf(`unexpected data struct type should be "%s" not "%s"`, expected.String(), at.String())
 			}
 			fna.typ = fnArgumentTypeData
 			fna.reflectTyp = at
