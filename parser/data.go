@@ -56,10 +56,10 @@ func (d *Data) AddAutoComplete(fieldName string, fn interface{}) error {
 	}
 	arg := find()
 	if arg == nil {
-		//todo error not found
+		return fmt.Errorf("error finding field named %s", fieldName)
 	}
 
-	fnArgs, err := analyzeAutocompleteFunction(fn, d.cmdStruct) //todo use a diff analyzer since it needs returns of autocomplete results
+	fnArgs, err := analyzeAutocompleteFunction(fn, d.cmdStruct)
 	if err != nil {
 		return fmt.Errorf("error analyzing autocomplete function: %w", err)
 	}

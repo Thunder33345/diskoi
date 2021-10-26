@@ -72,7 +72,7 @@ func (e *Executor) execute(
 
 func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption, data *parser.DiskoiData) ([]*discordgo.ApplicationCommandOptionChoice, error) {
-	return e.data.Autocomplete(s, i, opts, data)
+	return e.data.Autocomplete(s, i, opts, data) //todo better wraped errors that include cmd name
 }
 
 func (e *Executor) AddAutoComplete(fieldName string, fn interface{}) error {
