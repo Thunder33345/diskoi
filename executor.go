@@ -1,7 +1,6 @@
 package diskoi
 
 import (
-	"diskoi/parser"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"sync"
@@ -12,7 +11,7 @@ import (
 type Executor struct {
 	name        string
 	description string
-	data        *parser.Data
+	data        *Data
 	m           sync.Mutex
 }
 
@@ -23,7 +22,7 @@ func NewExecutor(name string, description string, fn interface{}) (*Executor, er
 		name:        name,
 		description: description,
 	}
-	data, err := parser.AnalyzeCmdFn(fn)
+	data, err := AnalyzeCmdFn(fn)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse command "%s": %w`, name, err)
 	}
@@ -60,7 +59,7 @@ func (e *Executor) execute(
 	s *discordgo.Session,
 	i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption,
-	dd *parser.DiskoiData,
+	dd *DiskoiData,
 ) error {
 	err := e.data.Execute(s, i, o, dd)
 	if err != nil {
@@ -70,7 +69,7 @@ func (e *Executor) execute(
 }
 
 func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,
-	opts []*discordgo.ApplicationCommandInteractionDataOption, data *parser.DiskoiData) ([]*discordgo.ApplicationCommandOptionChoice, error) {
+	opts []*discordgo.ApplicationCommandInteractionDataOption, data *DiskoiData) ([]*discordgo.ApplicationCommandOptionChoice, error) {
 	return e.data.Autocomplete(s, i, opts, data) //todo better wraped errors that include cmd name
 }
 
@@ -111,11 +110,11 @@ func (e *Executor) Unlock() {
 	e.m.Unlock()
 }
 
-func (e *Executor) ArgumentByName(name string) *parser.CommandArgument {
+func (e *Executor) ArgumentByName(name string) *CommandArgument {
 	//todo add better way to access without needs of manual locking
 	return e.data.ArgumentByName(name)
 }
 
-func (e *Executor) ArgumentByIndex(index []int) *parser.CommandArgument {
+func (e *Executor) ArgumentByIndex(index []int) *CommandArgument {
 	return e.data.ArgumentByIndex(index)
 }

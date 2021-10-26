@@ -1,7 +1,6 @@
-package parser
+package diskoi
 
 import (
-	"diskoi/mentionable"
 	"encoding/csv"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
@@ -248,7 +247,7 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 			arg.cType = discordgo.ApplicationCommandOptionUser
 		case elmT == reflect.TypeOf(discordgo.Role{}):
 			arg.cType = discordgo.ApplicationCommandOptionRole
-		case elmT == reflect.TypeOf(mentionable.Mentionable{}):
+		case elmT == reflect.TypeOf(Mentionable{}):
 			arg.cType = discordgo.ApplicationCommandOptionMentionable
 		default:
 			return nil, nil, fmt.Errorf(`unrecognized struct "%s"`, f.Type.String())

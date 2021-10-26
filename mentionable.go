@@ -1,4 +1,4 @@
-package mentionable
+package diskoi
 
 import "github.com/bwmarrin/discordgo"
 

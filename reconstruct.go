@@ -1,7 +1,6 @@
-package parser
+package diskoi
 
 import (
-	"diskoi/mentionable"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"reflect"
@@ -113,7 +112,7 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgumen
 		case discordgo.ApplicationCommandOptionRole:
 			v = opt.RoleValue(s, i.GuildID)
 		case discordgo.ApplicationCommandOptionMentionable:
-			men := &mentionable.Mentionable{}
+			men := &Mentionable{}
 			u, err := s.User(opt.Value.(string))
 			if err == nil {
 				men.User = u

@@ -1,4 +1,4 @@
-package parser
+package diskoi
 
 import (
 	"github.com/bwmarrin/discordgo"
