@@ -49,19 +49,19 @@ func (d *Data) Autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate
 		if !opt.Focused {
 			continue
 		}
-		arg := find(opt.Name)
+		arg := find(opt.Name) //todo better type check
 		if arg == nil {
-			panic("option cant be found")
+			return nil, fmt.Errorf("missing option %s with type %v", opt.Name, opt.Type)
 		}
 		values, err := reconstructFunctionArgs(arg.autocompleteArgs, d.cmdArg, d.cmdSpecialArg, data, s, i, opts)
 		if err != nil {
-			panic("cant reconstruct thing")
+			return nil, fmt.Errorf("error reconstructing autocomplete: %w", err)
 		}
 		rets := reflect.ValueOf(arg.autocompleteFn).Call(values)
 		optChoice := rets[0].Interface().([]*discordgo.ApplicationCommandOptionChoice)
 		return optChoice, nil
 	}
-	panic("TODO: panic for otherwise unreachable statement") //todo return unreachable error
+	return nil, fmt.Errorf("no options in focus")
 }
 
 func (d *Data) AddAutoComplete(fieldName string, fn interface{}) error {
