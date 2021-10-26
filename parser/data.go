@@ -49,9 +49,13 @@ func (d *Data) Autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate
 		if !opt.Focused {
 			continue
 		}
-		arg := find(opt.Name) //todo better type check
+		arg := find(opt.Name)
 		if arg == nil {
 			return nil, fmt.Errorf("missing option %s with type %v", opt.Name, opt.Type)
+		}
+		if arg.cType != opt.Type {
+			return nil, fmt.Errorf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
+				arg.fieldName, arg.cType, opt.Type)
 		}
 		values, err := reconstructFunctionArgs(arg.autocompleteArgs, d.cmdArg, d.cmdSpecialArg, data, s, i, opts)
 		if err != nil {
