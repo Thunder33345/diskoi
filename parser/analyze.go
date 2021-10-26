@@ -19,6 +19,8 @@ var (
 	rTypeICommandOptions = reflect.TypeOf((*CommandOptions)(nil)).Elem()
 )
 
+const ApplicationCommandOptionDouble = 10 //type doubles fixme get constant from discord go
+
 //AnalyzeCmdFn analyzes the function, and returns Data that can be executed
 func AnalyzeCmdFn(fn interface{}) (data *Data, error error) {
 	data = &Data{
@@ -186,7 +188,7 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 					if len(value) == 0 {
 						arg.Required = true
 					} else {
-						b, err := strconv.ParseBool(value)
+						b, err := strconv.ParseBool(value) //todo maybe error out?
 						if err != nil {
 							arg.Required = true
 						} else {
@@ -236,9 +238,8 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 		arg.cType = discordgo.ApplicationCommandOptionInteger
 	case reflect.Bool:
 		arg.cType = discordgo.ApplicationCommandOptionBoolean
-	case reflect.Float32:
-	case reflect.Float64:
-		arg.cType = 10 //type doubles fixme get constant from discord go
+	case reflect.Float32, reflect.Float64:
+		arg.cType = ApplicationCommandOptionDouble
 	case reflect.Struct:
 		switch {
 		case elmT == reflect.TypeOf(discordgo.Channel{}):
