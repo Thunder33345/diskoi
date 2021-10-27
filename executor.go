@@ -80,7 +80,7 @@ func (e *Executor) execute(
 ) error {
 	values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, e.cmdSpecialArg, meta, s, i, opts)
 	if err != nil {
-		return fmt.Errorf(`error reconstructing command "%s": %w`, e.name, err) //todo sentinel value
+		return fmt.Errorf(`error reconstructing command "%s": %w`, e.name, err)
 	}
 	fn := reflect.ValueOf(e.fn)
 	fn.Call(values)
@@ -98,28 +98,84 @@ func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCr
 	return optChoice, nil
 }
 
-func (e *Executor) AddAutoComplete(fieldName string, fn interface{}) error {
-	find := func() *CommandArgument {
-		for _, arg := range e.cmdArg {
-			if arg.fieldName == fieldName {
-				return arg
-			}
-		}
-		return nil
+func (e *Executor) SetName(fieldName string, name string) error {
+	e.m.Lock()
+	defer e.m.Unlock()
+	arg, err := e.findField(fieldName)
+	if err != nil {
+		return err
 	}
-	arg := find()
-	if arg == nil {
-		return fmt.Errorf(`error finding field named "%s" in command "%s"`, fieldName, e.name)
-	}
+	arg.Name = name
+	return nil
+}
 
+func (e *Executor) SetDescription(fieldName string, desc string) error {
+	e.m.Lock()
+	defer e.m.Unlock()
+	arg, err := e.findField(fieldName)
+	if err != nil {
+		return err
+	}
+	arg.Description = desc
+	return nil
+}
+
+func (e *Executor) SetRequired(fieldName string, required bool) error {
+	e.m.Lock()
+	defer e.m.Unlock()
+	arg, err := e.findField(fieldName)
+	if err != nil {
+		return err
+	}
+	arg.Required = required
+	return nil
+}
+
+func (e *Executor) SetChoices(fieldName string, choices []*discordgo.ApplicationCommandOptionChoice) error {
+	e.m.Lock()
+	defer e.m.Unlock()
+	arg, err := e.findField(fieldName)
+	if err != nil {
+		return err
+	}
+	arg.Choices = choices
+	return nil
+}
+
+func (e *Executor) SetChannelTypes(fieldName string, ChannelTypes []discordgo.ChannelType) error {
+	e.m.Lock()
+	defer e.m.Unlock()
+	arg, err := e.findField(fieldName)
+	if err != nil {
+		return err
+	}
+	arg.ChannelTypes = ChannelTypes
+	return nil
+}
+
+func (e *Executor) SetAutoComplete(fieldName string, fn interface{}) error {
+	e.m.Lock()
+	defer e.m.Unlock()
+	arg, err := e.findField(fieldName)
+	if err != nil {
+		return err
+	}
 	fnArgs, err := analyzeAutocompleteFunction(fn, e.cmdStruct)
 	if err != nil {
 		return fmt.Errorf(`error analyzing autocomplete function in "%s": %w`, e.name, err)
 	}
-
 	arg.autocompleteFn = fn
 	arg.autocompleteArgs = fnArgs
 	return nil
+}
+
+func (e *Executor) findField(name string) (*CommandArgument, error) {
+	for _, arg := range e.cmdArg {
+		if arg.fieldName == name {
+			return arg, nil
+		}
+	}
+	return nil, fmt.Errorf(`error finding field named "%s" in command "%s"`, name, e.name)
 }
 
 func (e *Executor) applicationCommand() *discordgo.ApplicationCommand {
