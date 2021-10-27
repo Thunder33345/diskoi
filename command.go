@@ -1,6 +1,7 @@
 package diskoi
 
 import (
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"sync"
 )
@@ -37,10 +38,10 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	c.m.RLock()
 	defer c.m.RUnlock()
 	path := make([]string, 0, 3)
-	if len(d.Options) <= 0 {
-		return nil, nil, nil, MissingOptionsError{path: path}
-	}
 	path = append(path, c.name)
+	if len(d.Options) <= 0 {
+		return nil, nil, nil, newDiscordExpectationError("missing options: expecting options given for command group, none given for" + errPath(path))
+	}
 	target := d.Options[0]
 
 	var group *SubcommandGroup
@@ -51,12 +52,14 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 		group, _ = c.findGroup(target.Name)
 		path = append(path, target.Name)
 		if group == nil {
-			return nil, nil, nil, MissingSubcommandError{name: target.Name, path: path, isGroup: true}
+			return nil, nil, nil, fmt.Errorf(`missing subcommand group: group "%s" not found on %s`, target.Name, errPath(path))
 		}
 		//if so we unwrap options to get the actual name
 		target = target.Options[0]
 	default:
-		return nil, nil, nil, NonCommandOptionTypeError{ty: target.Type, path: path}
+		return nil, nil, nil, newDiscordExpectationError(fmt.Sprintf(
+			`non command option type: expecting "SubCommand" or "SubCommandGroup" command option type but received "%s" for %s`,
+			target.Type.String(), errPath(path)))
 	}
 
 	group.m.RLock()
@@ -66,7 +69,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	if sub != nil {
 		return sub, target.Options, path, nil
 	}
-	return nil, nil, nil, MissingSubcommandError{name: target.Name, path: path, isGroup: false}
+	return nil, nil, nil, fmt.Errorf(`missing subcommand: subcommand "%s" not found on %s`, target.Name, errPath(path))
 }
 
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand {

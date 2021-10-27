@@ -2,53 +2,23 @@ package diskoi
 
 import (
 	"fmt"
-	"github.com/bwmarrin/discordgo"
 	"strings"
 )
 
+//CommandParsingError indicates error is originated from command parsing, lookup or reconstructing
 type CommandParsingError struct {
 	err error
 }
 
 func (e CommandParsingError) Error() string {
-	return "command parsing error: " + e.err.Error()
+	return fmt.Sprintf("command parsing error: %v", e.err)
 }
 
 func (e *CommandParsingError) Unwrap() error {
 	return e.err
 }
 
-type MissingOptionsError struct {
-	path []string
-}
-
-func (e MissingOptionsError) Error() string {
-	return "missing options(possible api de-sync?): expecting options given for command group, none given for" + errPath(e.path)
-}
-
-type NonCommandOptionTypeError struct {
-	ty   discordgo.ApplicationCommandOptionType
-	path []string
-}
-
-func (e NonCommandOptionTypeError) Error() string {
-	return "non command option type(possible api de-sync?): expecting \"SubCommand\" or \"SubCommandGroup\" command option type" +
-		" but received \"" + e.ty.String() + "\" for" + errPath(e.path)
-}
-
-type MissingSubcommandError struct {
-	name    string
-	path    []string
-	isGroup bool
-}
-
-func (e MissingSubcommandError) Error() string {
-	if e.isGroup {
-		return "missing subcommand group: group \"" + e.name + "\" not found on" + errPath(e.path)
-	}
-	return "missing subcommand: subcommand \"" + e.name + "\" not found on" + errPath(e.path)
-}
-
+//CommandExecutionError indicates error is originated from executing command
 type CommandExecutionError struct {
 	name string
 	err  error
@@ -62,6 +32,7 @@ func (e CommandExecutionError) Unwrap() error {
 	return e.err
 }
 
+//AutocompleteExecutionError indicates the error comes from executing an autocomplete handler
 type AutocompleteExecutionError struct {
 	name string
 	err  error
@@ -75,14 +46,7 @@ func (e AutocompleteExecutionError) Unwrap() error {
 	return e.err
 }
 
-type MissingBindingsError struct {
-	name string
-}
-
-func (e MissingBindingsError) Error() string {
-	return "missing bindings for " + e.name
-}
-
+//DiscordAPIError is used for warping errors produced by discordgo library
 type DiscordAPIError struct {
 	err error
 }
@@ -93,6 +57,19 @@ func (e DiscordAPIError) Error() string {
 
 func (e DiscordAPIError) Unwrap() error {
 	return e.err
+}
+
+//DiscordExpectationError is used to wrap text that signifies discord api is returning behaving in unexpected way
+type DiscordExpectationError struct {
+	err string
+}
+
+func (e DiscordExpectationError) Error() string {
+	return e.err
+}
+
+func newDiscordExpectationError(err string) error {
+	return DiscordExpectationError{err: err}
 }
 
 func errPath(path []string) string {

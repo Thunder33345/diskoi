@@ -60,17 +60,18 @@ func reconstructAutocompleteArgs(cmdArg []*CommandArgument, cmdSpecialArg []*spe
 			return nil, nil, fmt.Errorf("missing option %s with type %v", opt.Name, opt.Type)
 		}
 		if arg.cType != opt.Type {
-			return nil, nil, fmt.Errorf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
-				arg.fieldName, arg.cType, opt.Type)
+			return nil, nil, newDiscordExpectationError(fmt.Sprintf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
+				arg.fieldName, arg.cType, opt.Type))
 		}
 		values, err := reconstructFunctionArgs(arg.autocompleteArgs, cmdArg, cmdSpecialArg, data, s, i, opts)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error reconstructing autocomplete: %w", err)
+			return nil, nil, fmt.Errorf("reconstructing autocomplete: %w", err)
 		}
 		return arg, values, nil
 	}
-	return nil, nil, fmt.Errorf("no options in focus")
+	return nil, nil, newDiscordExpectationError(fmt.Sprintf("no options in focus"))
 }
+
 func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption, data *metaArgument) (reflect.Value, error) {
@@ -81,8 +82,8 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgumen
 			return reflect.Value{}, fmt.Errorf("missing option %s with type %v", opt.Name, opt.Type)
 		}
 		if py.cType != opt.Type {
-			return reflect.Value{}, fmt.Errorf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
-				py.fieldName, py.cType, opt.Type)
+			return reflect.Value{}, newDiscordExpectationError(fmt.Sprintf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
+				py.fieldName, py.cType, opt.Type))
 		}
 		fVal := val.FieldByIndex(py.fieldIndex)
 		var v interface{}
@@ -123,7 +124,7 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgumen
 			}
 			v = men
 		default:
-			return reflect.Value{}, fmt.Errorf("unrecognized ApplicationCommandOptionType %v in %s", opt.Type, py.fieldName)
+			return reflect.Value{}, newDiscordExpectationError(fmt.Sprintf("unrecognized ApplicationCommandOptionType %v in %s", opt.Type, py.fieldName))
 		}
 		recVal := reflect.ValueOf(v)
 		if fVal.Kind() != reflect.Ptr {
