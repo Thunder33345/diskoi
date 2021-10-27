@@ -24,7 +24,7 @@ type Data struct {
 }
 
 func (d *Data) Execute(s *discordgo.Session, i *discordgo.InteractionCreate,
-	opt []*discordgo.ApplicationCommandInteractionDataOption, data *specialData) error {
+	opt []*discordgo.ApplicationCommandInteractionDataOption, data *metaArgument) error {
 	values, err := reconstructFunctionArgs(d.fnArg, d.cmdArg, d.cmdSpecialArg, data, s, i, opt)
 	if err != nil {
 		return fmt.Errorf("error reconstructing command: %w", err)
@@ -35,7 +35,7 @@ func (d *Data) Execute(s *discordgo.Session, i *discordgo.InteractionCreate,
 }
 
 func (d *Data) Autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,
-	opts []*discordgo.ApplicationCommandInteractionDataOption, data *specialData) ([]*discordgo.ApplicationCommandOptionChoice, error) {
+	opts []*discordgo.ApplicationCommandInteractionDataOption, data *metaArgument) ([]*discordgo.ApplicationCommandOptionChoice, error) {
 	arg, values, err := reconstructAutocompleteArgs(d.cmdArg, d.cmdSpecialArg, data, s, i, opts)
 	if err != nil {
 		return nil, fmt.Errorf("error autocompleting command: %w", err)

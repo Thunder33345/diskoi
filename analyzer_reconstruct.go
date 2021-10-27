@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument, data *specialData,
+func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument, data *metaArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption) ([]reflect.Value, error) {
 	values := make([]reflect.Value, 0, len(fnArg))
@@ -40,7 +40,7 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*CommandArgument, cmd
 	}
 	return values, nil
 }
-func reconstructAutocompleteArgs(cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument, data *specialData,
+func reconstructAutocompleteArgs(cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument, data *metaArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption) (*CommandArgument, []reflect.Value, error) {
 	find := func(name string) *CommandArgument {
@@ -73,7 +73,7 @@ func reconstructAutocompleteArgs(cmdArg []*CommandArgument, cmdSpecialArg []*spe
 }
 func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
-	opts []*discordgo.ApplicationCommandInteractionDataOption, data *specialData) (reflect.Value, error) {
+	opts []*discordgo.ApplicationCommandInteractionDataOption, data *metaArgument) (reflect.Value, error) {
 	val := reflect.New(cmdStruct).Elem()
 	for _, opt := range opts {
 		py := findPyArg(cmdArg, opt.Name)

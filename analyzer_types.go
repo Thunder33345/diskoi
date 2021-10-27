@@ -65,7 +65,7 @@ const (
 	cmdDataTypeDiskoiPath specialArgType = iota
 )
 
-type specialData struct {
+type metaArgument struct {
 	Path []string
 }
 

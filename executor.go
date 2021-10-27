@@ -59,7 +59,7 @@ func (e *Executor) execute(
 	s *discordgo.Session,
 	i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption,
-	dd *specialData,
+	dd *metaArgument,
 ) error {
 	err := e.data.Execute(s, i, o, dd)
 	if err != nil {
@@ -69,7 +69,7 @@ func (e *Executor) execute(
 }
 
 func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,
-	opts []*discordgo.ApplicationCommandInteractionDataOption, data *specialData) ([]*discordgo.ApplicationCommandOptionChoice, error) {
+	opts []*discordgo.ApplicationCommandInteractionDataOption, data *metaArgument) ([]*discordgo.ApplicationCommandOptionChoice, error) {
 	return e.data.Autocomplete(s, i, opts, data) //todo better wraped errors that include cmd name
 }
 
