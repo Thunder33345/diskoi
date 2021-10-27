@@ -49,7 +49,12 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 			name:         "test csv fail",
 			in:           reflect.StructField{Name: "test", Tag: `diskoi:"\"name:foo!!:,!,required"`, Type: reflect.TypeOf((*string)(nil))},
 			wantErr:      true,
-			wantErrRegex: regexp.MustCompile("^error parsing tag:"),
+			wantErrRegex: regexp.MustCompile("^parsing tag:"),
+		}, {
+			name:         "test invalid tag",
+			in:           reflect.StructField{Name: "test", Tag: `diskoi:"name:foobar,bar:foo"`, Type: reflect.TypeOf((*string)(nil))},
+			wantErr:      true,
+			wantErrRegex: regexp.MustCompile("^unrecognized tag \".*?\" with"),
 		}, {
 			name: "test require false",
 			in:   reflect.StructField{Tag: `diskoi:"\"name:foobar\",required:false"`, Type: reflect.TypeOf((*int)(nil))},
@@ -67,10 +72,34 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 				Required: true,
 			},
 		}, {
+			name: "test usertype",
+			in:   reflect.StructField{Tag: `diskoi:"\"name:foobarBar\",required:1"`, Type: reflect.TypeOf((*discordgo.User)(nil))},
+			cmd: &commandArgument{
+				Name:     "foobarBar",
+				cType:    discordgo.ApplicationCommandOptionUser,
+				Required: true,
+			},
+		}, {
+			name: "test role type",
+			in:   reflect.StructField{Tag: `diskoi:"\"name:foobarBar\",required:0"`, Type: reflect.TypeOf((*discordgo.Role)(nil))},
+			cmd: &commandArgument{
+				Name:     "foobarBar",
+				cType:    discordgo.ApplicationCommandOptionRole,
+				Required: false,
+			},
+		}, {
+			name: "test mentionable",
+			in:   reflect.StructField{Tag: `diskoi:"\"name:foobarBar\",required:1"`, Type: reflect.TypeOf((*Mentionable)(nil))},
+			cmd: &commandArgument{
+				Name:     "foobarBar",
+				cType:    discordgo.ApplicationCommandOptionMentionable,
+				Required: true,
+			},
+		}, {
 			name:         "test require implicit",
 			in:           reflect.StructField{Tag: `diskoi:"\"name:foobar\",required:foo"`, Type: reflect.TypeOf((*discordgo.Channel)(nil))},
 			wantErr:      true,
-			wantErrRegex: regexp.MustCompile("^error converting \".*?\" into bool"),
+			wantErrRegex: regexp.MustCompile("^converting \".*?\" into bool: "),
 		}, {
 			name: "test special",
 			in:   reflect.StructField{Tag: `diskoi:"special:path"`, Type: reflect.TypeOf(([]string)(nil))},
@@ -78,10 +107,25 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 				dataType: cmdDataTypeDiskoiPath,
 			},
 		}, {
+			name:         "test special invalid receiver",
+			in:           reflect.StructField{Tag: `diskoi:"special:path"`, Type: reflect.TypeOf(([]int)(nil))},
+			wantErr:      true,
+			wantErrRegex: regexp.MustCompile("^invalid reciever type \""),
+		}, {
 			name:         "test special fail",
 			in:           reflect.StructField{Tag: `diskoi:"special:foobar"`, Type: reflect.TypeOf((*string)(nil))},
 			wantErr:      true,
 			wantErrRegex: regexp.MustCompile("^unrecognized special tag with value"),
+		}, {
+			name:         "test unrecognizable struct",
+			in:           reflect.StructField{Tag: `diskoi:"name:foo"`, Type: reflect.TypeOf((*commandArgument)(nil))},
+			wantErr:      true,
+			wantErrRegex: regexp.MustCompile("^unrecognized struct \".*?\""),
+		}, {
+			name:         "test unsupported kind",
+			in:           reflect.StructField{Tag: `diskoi:"name:foo"`, Type: reflect.TypeOf((complex)(0, 0))},
+			wantErr:      true,
+			wantErrRegex: regexp.MustCompile("^unsupported kind \".*?\""),
 		},
 	}
 	for _, tc := range cases {
