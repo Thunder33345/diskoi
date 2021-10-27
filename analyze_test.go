@@ -12,7 +12,7 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 	cases := []struct {
 		name         string
 		in           reflect.StructField
-		cmd          *CommandArgument
+		cmd          *commandArgument
 		special      *specialArgument
 		wantErr      bool
 		wantErrRegex *regexp.Regexp
@@ -20,7 +20,7 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 		{
 			name: "test csv",
 			in:   reflect.StructField{Name: "test", Tag: `diskoi:"name:foo,description:foobar,required"`, Type: reflect.TypeOf((*string)(nil))},
-			cmd: &CommandArgument{
+			cmd: &commandArgument{
 				fieldName:   "test",
 				cType:       discordgo.ApplicationCommandOptionString,
 				Name:        "foo",
@@ -30,7 +30,7 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 		}, {
 			name: "test csv2",
 			in:   reflect.StructField{Name: "test", Tag: `diskoi:"name:foo!!:!,required"`, Type: reflect.TypeOf((*bool)(nil))},
-			cmd: &CommandArgument{
+			cmd: &commandArgument{
 				fieldName: "test",
 				cType:     discordgo.ApplicationCommandOptionBoolean,
 				Name:      "foo!!:!",
@@ -39,7 +39,7 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 		}, {
 			name: "test csv3",
 			in:   reflect.StructField{Name: "test", Tag: `diskoi:"\"name:foobar\",required"`, Type: reflect.TypeOf((*float32)(nil))},
-			cmd: &CommandArgument{
+			cmd: &commandArgument{
 				fieldName: "test",
 				Name:      "foobar",
 				cType:     applicationCommandOptionDouble,
@@ -53,7 +53,7 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 		}, {
 			name: "test require false",
 			in:   reflect.StructField{Tag: `diskoi:"\"name:foobar\",required:false"`, Type: reflect.TypeOf((*int)(nil))},
-			cmd: &CommandArgument{
+			cmd: &commandArgument{
 				Name:     "foobar",
 				cType:    discordgo.ApplicationCommandOptionInteger,
 				Required: false,
@@ -61,7 +61,7 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 		}, {
 			name: "test require true",
 			in:   reflect.StructField{Tag: `diskoi:"\"name:foobar\",required:1"`, Type: reflect.TypeOf((*discordgo.Channel)(nil))},
-			cmd: &CommandArgument{
+			cmd: &commandArgument{
 				Name:     "foobar",
 				cType:    discordgo.ApplicationCommandOptionChannel,
 				Required: true,

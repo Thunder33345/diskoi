@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument, data *metaArgument,
+func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *metaArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption) ([]reflect.Value, error) {
 	values := make([]reflect.Value, 0, len(fnArg))
@@ -40,10 +40,10 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*CommandArgument, cmd
 	}
 	return values, nil
 }
-func reconstructAutocompleteArgs(cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument, data *metaArgument,
+func reconstructAutocompleteArgs(cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *metaArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
-	opts []*discordgo.ApplicationCommandInteractionDataOption) (*CommandArgument, []reflect.Value, error) {
-	find := func(name string) *CommandArgument {
+	opts []*discordgo.ApplicationCommandInteractionDataOption) (*commandArgument, []reflect.Value, error) {
+	find := func(name string) *commandArgument {
 		for _, arg := range cmdArg {
 			if arg.Name == name {
 				return arg
@@ -72,7 +72,7 @@ func reconstructAutocompleteArgs(cmdArg []*CommandArgument, cmdSpecialArg []*spe
 	return nil, nil, newDiscordExpectationError(fmt.Sprintf("no options in focus"))
 }
 
-func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgument, cmdSpecialArg []*specialArgument,
+func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*commandArgument, cmdSpecialArg []*specialArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption, data *metaArgument) (reflect.Value, error) {
 	val := reflect.New(cmdStruct).Elem()
@@ -150,7 +150,7 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgumen
 	return val, nil
 }
 
-func findPyArg(pys []*CommandArgument, name string) *CommandArgument {
+func findPyArg(pys []*commandArgument, name string) *commandArgument {
 	for _, py := range pys {
 		if name == py.Name {
 			return py

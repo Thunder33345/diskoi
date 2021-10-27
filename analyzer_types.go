@@ -38,7 +38,7 @@ func (a fnArgumentType) String() string {
 	}
 }
 
-type CommandArgument struct {
+type commandArgument struct {
 	fieldIndex []int
 	fieldName  string
 

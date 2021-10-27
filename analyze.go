@@ -21,13 +21,13 @@ var (
 const applicationCommandOptionDouble = 10 //type doubles fixme get constant from discord go
 
 //analyzeCmdFn analyzes the function, and returns Data that can be executed
-func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*CommandArgument, []*specialArgument, error) {
+func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*commandArgument, []*specialArgument, error) {
 	fnArgs, err := analyzeFunction(fn)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("analyzing function: %w", err)
 	}
 	var cmdStruct reflect.Type
-	var cmdArg []*CommandArgument
+	var cmdArg []*commandArgument
 	var specialArg []*specialArgument
 	if len(fnArgs) >= 1 {
 		if arg := fnArgs[len(fnArgs)-1]; arg.typ == fnArgumentTypeData {
@@ -112,9 +112,9 @@ func analyzeFunctionArgument(typ reflect.Type, expected reflect.Type) ([]*fnArgu
 	return fnArgs, nil
 }
 
-//analyzeCommandStruct analyzes a struct and create slice of CommandArgument and specialArgument
-func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*CommandArgument, []*specialArgument, error) {
-	cmdArgs := make([]*CommandArgument, 0, typ.NumField())
+//analyzeCommandStruct analyzes a struct and create slice of commandArgument and specialArgument
+func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*commandArgument, []*specialArgument, error) {
+	cmdArgs := make([]*commandArgument, 0, typ.NumField())
 	spcArgs := make([]*specialArgument, 0, 1)
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
@@ -154,11 +154,11 @@ func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*CommandArgument, []*s
 
 const magicTag = "diskoi"
 
-//analyzeCommandArgumentField analyze a command struct field and return CommandArgument or specialArgument
-func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *specialArgument, error) {
+//analyzeCommandArgumentField analyze a command struct field and return commandArgument or specialArgument
+func analyzeCommandArgumentField(f reflect.StructField) (*commandArgument, *specialArgument, error) {
 	tag, ok := f.Tag.Lookup(magicTag)
 
-	arg := &CommandArgument{
+	arg := &commandArgument{
 		fieldName: f.Name,
 		Name:      strings.ToLower(f.Name),
 	}

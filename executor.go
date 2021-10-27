@@ -23,7 +23,7 @@ type Executor struct {
 	//cmdStruct must be the last argument of the fn, if exist
 	cmdStruct reflect.Type
 	//cmdArg is a slice command arguments from the struct, used for generating ApplicationCommandOptions
-	cmdArg []*CommandArgument
+	cmdArg []*commandArgument
 	//cmdSpecialArg holds slice of special meta arguments
 	cmdSpecialArg []*specialArgument
 }
@@ -169,7 +169,7 @@ func (e *Executor) SetAutoComplete(fieldName string, fn interface{}) error {
 	return nil
 }
 
-func (e *Executor) findField(name string) (*CommandArgument, error) {
+func (e *Executor) findField(name string) (*commandArgument, error) {
 	for _, arg := range e.cmdArg {
 		if arg.fieldName == name {
 			return arg, nil
