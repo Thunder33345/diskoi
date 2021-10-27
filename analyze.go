@@ -212,12 +212,12 @@ func analyzeCommandArgumentField(f reflect.StructField) (*commandArgument, *spec
 	}
 
 	if f.Type.Implements(rTypeIChannelType) {
-		v := reflect.New(f.Type)
+		v := reflect.New(f.Type.Elem()).Elem()
 		ch := v.Interface().(ChannelType)
 		arg.ChannelTypes = ch.DiskoiChannelTypes()
 	}
 	if f.Type.Implements(rTypeICommandOptions) {
-		v := reflect.New(f.Type)
+		v := reflect.New(f.Type.Elem()).Elem()
 		ch := v.Interface().(CommandOptions)
 		arg.Choices = ch.DiskoiCommandOptions()
 	}
@@ -247,7 +247,9 @@ func analyzeCommandArgumentField(f reflect.StructField) (*commandArgument, *spec
 		case elmT == reflect.TypeOf(Mentionable{}):
 			arg.cType = discordgo.ApplicationCommandOptionMentionable
 		default:
-			return nil, nil, fmt.Errorf(`unrecognized struct "%s"`, f.Type.String())
+			if len(arg.ChannelTypes) == 0 || len(arg.Choices) == 0 {
+				return nil, nil, fmt.Errorf(`unrecognized struct "%s"`, f.Type.String())
+			}
 		}
 	default:
 		return nil, nil, fmt.Errorf(`unsupported kind "%s"`, f.Type.String())

@@ -154,3 +154,26 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 		})
 	}
 }
+
+func TestAnalyzeCommandArgumentFieldInterface(t *testing.T) {
+	r := require.New(t)
+	field := reflect.StructField{
+		Type: reflect.TypeOf(&InterfaceTestingStruct{}),
+	}
+	arg, special, err := analyzeCommandArgumentField(field)
+	r.Nil(special)
+	r.Nil(err)
+	r.EqualValues([]discordgo.ChannelType{discordgo.ChannelTypeGuildText, discordgo.ChannelTypeDM}, arg.ChannelTypes)
+	r.EqualValues([]*discordgo.ApplicationCommandOptionChoice{{Name: "one", Value: 1}, {Name: "two", Value: 2}}, arg.Choices)
+}
+
+type InterfaceTestingStruct struct {
+}
+
+func (i InterfaceTestingStruct) DiskoiCommandOptions() []*discordgo.ApplicationCommandOptionChoice {
+	return []*discordgo.ApplicationCommandOptionChoice{{Name: "one", Value: 1}, {Name: "two", Value: 2}}
+}
+
+func (i InterfaceTestingStruct) DiskoiChannelTypes() []discordgo.ChannelType {
+	return []discordgo.ChannelType{discordgo.ChannelTypeGuildText, discordgo.ChannelTypeDM}
+}
