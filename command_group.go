@@ -24,12 +24,14 @@ func (c *SubcommandGroup) applicationCommandOptions() []*discordgo.ApplicationCo
 	defer c.m.RUnlock()
 	o := make([]*discordgo.ApplicationCommandOption, 0, len(c.h))
 	for _, e := range c.h {
+		e.m.Lock()
 		o = append(o, &discordgo.ApplicationCommandOption{
 			Type:        discordgo.ApplicationCommandOptionSubCommand,
 			Name:        e.name,
 			Description: e.description,
 			Options:     e.applicationCommandOptions(),
 		})
+		e.m.Unlock()
 	}
 	return o
 }

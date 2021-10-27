@@ -134,8 +134,6 @@ func (e *Executor) applicationCommand() *discordgo.ApplicationCommand {
 }
 
 func (e *Executor) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
-	e.m.Lock()
-	defer e.m.Unlock()
 	o := make([]*discordgo.ApplicationCommandOption, 0, len(e.cmdArg))
 	for _, b := range e.cmdArg {
 		o = append(o, &discordgo.ApplicationCommandOption{
