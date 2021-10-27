@@ -22,7 +22,7 @@ func NewExecutor(name string, description string, fn interface{}) (*Executor, er
 		name:        name,
 		description: description,
 	}
-	data, err := AnalyzeCmdFn(fn)
+	data, err := analyzeCmdFn(fn)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse command "%s": %w`, name, err)
 	}

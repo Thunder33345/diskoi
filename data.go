@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-//Data is an analysis produced by AnalyzeCmdFn
+//Data is an analysis produced by analyzeCmdFn
 //It contains everything needed to reconstruct and call it back
 //todo rename this Data feels too vague, maybe CommandData
 type Data struct {

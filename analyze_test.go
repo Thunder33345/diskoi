@@ -42,7 +42,7 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 			cmd: &CommandArgument{
 				fieldName: "test",
 				Name:      "foobar",
-				cType:     ApplicationCommandOptionDouble,
+				cType:     applicationCommandOptionDouble,
 				Required:  true,
 			},
 		}, {
