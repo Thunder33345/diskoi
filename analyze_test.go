@@ -67,13 +67,10 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 				Required: true,
 			},
 		}, {
-			name: "test require implicit",
-			in:   reflect.StructField{Tag: `diskoi:"\"name:foobar\",required:foo"`, Type: reflect.TypeOf((*discordgo.Channel)(nil))},
-			cmd: &CommandArgument{
-				Name:     "foobar",
-				cType:    discordgo.ApplicationCommandOptionChannel,
-				Required: true,
-			},
+			name:         "test require implicit",
+			in:           reflect.StructField{Tag: `diskoi:"\"name:foobar\",required:foo"`, Type: reflect.TypeOf((*discordgo.Channel)(nil))},
+			wantErr:      true,
+			wantErrRegex: regexp.MustCompile("^error converting \".*?\" into bool"),
 		}, {
 			name: "test special",
 			in:   reflect.StructField{Tag: `diskoi:"special:path"`, Type: reflect.TypeOf(([]string)(nil))},

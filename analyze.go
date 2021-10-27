@@ -187,12 +187,11 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 					if len(value) == 0 {
 						arg.Required = true
 					} else {
-						b, err := strconv.ParseBool(value) //todo maybe error out?
+						b, err := strconv.ParseBool(value)
 						if err != nil {
-							arg.Required = true
-						} else {
-							arg.Required = b
+							return nil, nil, fmt.Errorf(`error converting "%s" into bool: %w`, value, err)
 						}
+						arg.Required = b
 					}
 				case "special":
 					sp := &specialArgument{}
