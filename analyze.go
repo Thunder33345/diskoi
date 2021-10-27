@@ -21,26 +21,24 @@ var (
 const applicationCommandOptionDouble = 10 //type doubles fixme get constant from discord go
 
 //analyzeCmdFn analyzes the function, and returns Data that can be executed
-func analyzeCmdFn(fn interface{}) (data *Data, error error) {
-	data = &Data{
-		fn: fn,
-	}
+func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*CommandArgument, []*specialArgument, error) {
 	fnArgs, err := analyzeFunction(fn)
 	if err != nil {
-		return nil, fmt.Errorf("error analyzing function: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("error analyzing function: %w", err)
 	}
-	data.fnArg = fnArgs
-
+	var cmdStruct reflect.Type
+	var cmdArg []*CommandArgument
+	var specialArg []*specialArgument
 	if len(fnArgs) >= 1 {
 		if arg := fnArgs[len(fnArgs)-1]; arg.typ == fnArgumentTypeData {
-			data.cmdStruct = arg.reflectTyp
-			data.cmdArg, data.cmdSpecialArg, err = analyzeCommandStruct(arg.reflectTyp, []int{})
+			cmdStruct = arg.reflectTyp
+			cmdArg, specialArg, err = analyzeCommandStruct(arg.reflectTyp, []int{})
 			if err != nil {
-				return nil, fmt.Errorf(`error analyzing command data(%s): %w`, arg.reflectTyp.String(), err)
+				return nil, nil, nil, nil, fmt.Errorf(`error analyzing command data(%s): %w`, arg.reflectTyp.String(), err)
 			}
 		}
 	}
-	return data, nil
+	return fnArgs, cmdStruct, cmdArg, specialArg, nil
 }
 
 func analyzeFunction(fn interface{}) ([]*fnArgument, error) {
