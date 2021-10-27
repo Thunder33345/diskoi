@@ -24,7 +24,7 @@ const applicationCommandOptionDouble = 10 //type doubles fixme get constant from
 func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*CommandArgument, []*specialArgument, error) {
 	fnArgs, err := analyzeFunction(fn)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("error analyzing function: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("analyzing function: %w", err)
 	}
 	var cmdStruct reflect.Type
 	var cmdArg []*CommandArgument
@@ -34,7 +34,7 @@ func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*CommandArgume
 			cmdStruct = arg.reflectTyp
 			cmdArg, specialArg, err = analyzeCommandStruct(arg.reflectTyp, []int{})
 			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf(`error analyzing command data(%s): %w`, arg.reflectTyp.String(), err)
+				return nil, nil, nil, nil, fmt.Errorf(`analyzing command data(%s): %w`, arg.reflectTyp.String(), err)
 			}
 		}
 	}
@@ -137,7 +137,7 @@ func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*CommandArgument, []*s
 
 		py, pys, err := analyzeCommandArgumentField(f)
 		if err != nil {
-			return nil, nil, fmt.Errorf(`failed parsing struct field on "%s.%s": %w`, typ.String(), f.Name, err)
+			return nil, nil, fmt.Errorf(`analyzing field "%s.%s": %w`, typ.String(), f.Name, err)
 		}
 		if py != nil {
 			py.fieldIndex = pos
@@ -171,7 +171,7 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 
 		allEntries, err := r.ReadAll()
 		if err != nil {
-			return nil, nil, fmt.Errorf(`error parsing tag: %s`, err.Error())
+			return nil, nil, fmt.Errorf(`parsing tag: %s`, err.Error())
 		}
 		for _, subEntry := range allEntries {
 			for _, ent := range subEntry {
@@ -187,7 +187,7 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 					} else {
 						b, err := strconv.ParseBool(value)
 						if err != nil {
-							return nil, nil, fmt.Errorf(`error converting "%s" into bool: %w`, value, err)
+							return nil, nil, fmt.Errorf(`converting "%s" into bool: %w`, value, err)
 						}
 						arg.Required = b
 					}
@@ -198,7 +198,7 @@ func analyzeCommandArgumentField(f reflect.StructField) (*CommandArgument, *spec
 						sp.dataType = cmdDataTypeDiskoiPath
 
 						if f.Type.Kind() != reflect.Slice || f.Type.Elem().Kind() != reflect.String {
-							return nil, nil, fmt.Errorf(`invalid reciever type "%s" on special:path tag`, f.Type.String())
+							return nil, nil, fmt.Errorf(`invalid reciever type "%s" on special:path tag expecting []string`, f.Type.String())
 						}
 					default:
 						return nil, nil, fmt.Errorf("unrecognized special tag with value \"%s\"", value)

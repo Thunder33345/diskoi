@@ -21,7 +21,7 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*CommandArgument, cmd
 			m := mt.Interface().(Unmarshal)
 			err := m.UnmarshalDiskoi(s, i, o)
 			if err != nil {
-				return nil, fmt.Errorf("error unmarshalling %s: %w", arg.reflectTyp.String(), err)
+				return nil, fmt.Errorf("unmarshalling %s: %w", arg.reflectTyp.String(), err)
 			}
 			if arg.typ == fnArgumentTypeMarshalPtr {
 				values = append(values, reflect.ValueOf(m))
@@ -31,7 +31,7 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*CommandArgument, cmd
 		case fnArgumentTypeData:
 			v, err := reconstructCommandArgument(arg.reflectTyp, cmdArg, cmdSpecialArg, s, i, o, data)
 			if err != nil {
-				return nil, fmt.Errorf(`error reconstructing command data "%s": %w`, arg.reflectTyp.String(), err)
+				return nil, fmt.Errorf(`reconstructing command data "%s": %w`, arg.reflectTyp.String(), err)
 			}
 			values = append(values, v)
 		default:
