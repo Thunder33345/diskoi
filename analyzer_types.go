@@ -65,7 +65,7 @@ const (
 	cmdDataTypeDiskoiPath specialArgType = iota
 )
 
-type DiskoiData struct {
+type specialData struct {
 	Path []string
 }
 
