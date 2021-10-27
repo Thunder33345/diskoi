@@ -17,10 +17,18 @@ type Command interface {
 }
 
 //Mentionable is an instance of something that could be a Role or a User
-//todo improve this type into something like an interface receiver and access functions rather then 2 values
 type Mentionable struct {
-	Role *discordgo.Role
-	User *discordgo.User
+	Value interface{}
+}
+
+func (m *Mentionable) AsUser() (*discordgo.User, bool) {
+	u, ok := m.Value.(*discordgo.User)
+	return u, ok
+}
+
+func (m *Mentionable) AsRole() (*discordgo.Role, bool) {
+	r, ok := m.Value.(*discordgo.Role)
+	return r, ok
 }
 
 type errorHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, cmd Command, err error)

@@ -114,13 +114,10 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*CommandArgumen
 			v = opt.RoleValue(s, i.GuildID)
 		case discordgo.ApplicationCommandOptionMentionable:
 			men := &Mentionable{}
-			u, err := s.User(opt.Value.(string))
-			if err == nil {
-				men.User = u
-			}
-			r, err := s.State.Role(i.GuildID, opt.Value.(string))
-			if err == nil {
-				men.Role = r
+			if u, err := s.User(opt.Value.(string)); err == nil {
+				men.Value = u
+			} else if r, err := s.State.Role(i.GuildID, opt.Value.(string)); err == nil {
+				men.Value = r
 			}
 			v = men
 		default:
