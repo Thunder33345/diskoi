@@ -7,6 +7,7 @@ import (
 
 type Diskoi struct {
 	//idea maybe syncHandling option for go execute
+	//todo middlewares for executor command and command group
 	s                 *discordgo.Session
 	remover           func()
 	commands          []Command

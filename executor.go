@@ -137,7 +137,7 @@ func (e *Executor) findField(name string) (*commandArgument, error) {
 			return arg, nil
 		}
 	}
-	return nil, fmt.Errorf(`error finding field named "%s" in command "%s"`, name, e.name)
+	return nil, fmt.Errorf(`cant find field named "%s" in command "%s"`, name, e.name)
 }
 
 func (e *Executor) SetName(fieldName string, name string) error {
@@ -151,6 +151,14 @@ func (e *Executor) SetName(fieldName string, name string) error {
 	return nil
 }
 
+func (e *Executor) MustSetName(fieldName string, name string) *Executor {
+	err := e.SetName(fieldName, name)
+	if err != nil {
+		panic(fmt.Errorf("error setting name: %w", err))
+	}
+	return e
+}
+
 func (e *Executor) SetDescription(fieldName string, desc string) error {
 	e.m.Lock()
 	defer e.m.Unlock()
@@ -160,6 +168,14 @@ func (e *Executor) SetDescription(fieldName string, desc string) error {
 	}
 	arg.Description = desc
 	return nil
+}
+
+func (e *Executor) MustSetDescription(fieldName string, desc string) *Executor {
+	err := e.SetDescription(fieldName, desc)
+	if err != nil {
+		panic(fmt.Errorf("error setting description: %w", err))
+	}
+	return e
 }
 
 func (e *Executor) SetRequired(fieldName string, required bool) error {
@@ -173,6 +189,14 @@ func (e *Executor) SetRequired(fieldName string, required bool) error {
 	return nil
 }
 
+func (e *Executor) MustSetRequired(fieldName string, required bool) *Executor {
+	err := e.SetRequired(fieldName, required)
+	if err != nil {
+		panic(fmt.Errorf("error setting required: %w", err))
+	}
+	return e
+}
+
 func (e *Executor) SetChoices(fieldName string, choices []*discordgo.ApplicationCommandOptionChoice) error {
 	e.m.Lock()
 	defer e.m.Unlock()
@@ -182,6 +206,14 @@ func (e *Executor) SetChoices(fieldName string, choices []*discordgo.Application
 	}
 	arg.Choices = choices
 	return nil
+}
+
+func (e *Executor) MustSetChoices(fieldName string, choices []*discordgo.ApplicationCommandOptionChoice) *Executor {
+	err := e.SetChoices(fieldName, choices)
+	if err != nil {
+		panic(fmt.Errorf("error setting choices: %w", err))
+	}
+	return e
 }
 
 func (e *Executor) SetChannelTypes(fieldName string, ChannelTypes []discordgo.ChannelType) error {
@@ -195,6 +227,14 @@ func (e *Executor) SetChannelTypes(fieldName string, ChannelTypes []discordgo.Ch
 	return nil
 }
 
+func (e *Executor) MustChannelTypes(fieldName string, ChannelTypes []discordgo.ChannelType) *Executor {
+	err := e.SetChannelTypes(fieldName, ChannelTypes)
+	if err != nil {
+		panic(fmt.Errorf("error setting channel types: %w", err))
+	}
+	return e
+}
+
 func (e *Executor) SetAutoComplete(fieldName string, fn interface{}) error {
 	e.m.Lock()
 	defer e.m.Unlock()
@@ -204,9 +244,17 @@ func (e *Executor) SetAutoComplete(fieldName string, fn interface{}) error {
 	}
 	fnArgs, err := analyzeAutocompleteFunction(fn, e.cmdStruct)
 	if err != nil {
-		return fmt.Errorf(`error analyzing autocomplete function in "%s": %w`, e.name, err)
+		return fmt.Errorf(`error analyzing autocomplete for command "%s" in field "%s": %w`, e.name, fieldName, err)
 	}
 	arg.autocompleteFn = fn
 	arg.autocompleteArgs = fnArgs
 	return nil
+}
+
+func (e *Executor) MustSetAutoComplete(fieldName string, fn interface{}) *Executor {
+	err := e.SetAutoComplete(fieldName, fn)
+	if err != nil {
+		panic(fmt.Errorf("error setting autocomplete: %w", err))
+	}
+	return e
 }

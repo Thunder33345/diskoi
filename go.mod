@@ -1,4 +1,4 @@
-module diskoi
+module github.com/thunder33345/diskoi
 
 go 1.17
 
