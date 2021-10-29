@@ -82,7 +82,7 @@ func (e *Executor) execute(
 	s *discordgo.Session,
 	i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption,
-	meta *metaArgument,
+	meta *MetaArgument,
 ) error {
 	values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, e.cmdSpecialArg, meta, s, i, opts)
 	if err != nil {
@@ -94,7 +94,7 @@ func (e *Executor) execute(
 }
 
 func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,
-	opts []*discordgo.ApplicationCommandInteractionDataOption, meta *metaArgument) ([]*discordgo.ApplicationCommandOptionChoice, error) {
+	opts []*discordgo.ApplicationCommandInteractionDataOption, meta *MetaArgument) ([]*discordgo.ApplicationCommandOptionChoice, error) {
 	arg, values, err := reconstructAutocompleteArgs(e.cmdArg, e.cmdSpecialArg, meta, s, i, opts)
 	if err != nil {
 		return nil, fmt.Errorf(`error autocompleting command "%s": %w`, e.name, err)

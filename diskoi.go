@@ -52,7 +52,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
 			return
 		}
-		err = executor.execute(s, i, options, &metaArgument{Path: path})
+		err = executor.execute(s, i, options, &MetaArgument{path: path})
 		if err != nil {
 			d.getErrorHandler()(s, i, e, CommandExecutionError{name: executor.name, err: err})
 		}
@@ -72,7 +72,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
 			return
 		}
-		opts, err := executor.autocomplete(s, i, options, &metaArgument{Path: path})
+		opts, err := executor.autocomplete(s, i, options, &MetaArgument{path: path})
 		if err != nil {
 			d.getErrorHandler()(s, i, e, AutocompleteExecutionError{name: executor.name, err: err})
 		}

@@ -65,8 +65,12 @@ const (
 	cmdDataTypeDiskoiPath specialArgType = iota
 )
 
-type metaArgument struct {
-	Path []string
+type MetaArgument struct {
+	path []string
+}
+
+func (m *MetaArgument) Path() []string {
+	return m.path
 }
 
 type Unmarshal interface {

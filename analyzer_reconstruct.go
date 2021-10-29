@@ -6,7 +6,7 @@ import (
 	"reflect"
 )
 
-func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *metaArgument,
+func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *MetaArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption) ([]reflect.Value, error) {
 	values := make([]reflect.Value, 0, len(fnArg))
@@ -40,7 +40,7 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmd
 	}
 	return values, nil
 }
-func reconstructAutocompleteArgs(cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *metaArgument,
+func reconstructAutocompleteArgs(cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *MetaArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption) (*commandArgument, []reflect.Value, error) {
 	find := func(name string) *commandArgument {
@@ -74,7 +74,7 @@ func reconstructAutocompleteArgs(cmdArg []*commandArgument, cmdSpecialArg []*spe
 
 func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*commandArgument, cmdSpecialArg []*specialArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
-	opts []*discordgo.ApplicationCommandInteractionDataOption, data *metaArgument) (reflect.Value, error) {
+	opts []*discordgo.ApplicationCommandInteractionDataOption, data *MetaArgument) (reflect.Value, error) {
 	val := reflect.New(cmdStruct).Elem()
 	for _, opt := range opts {
 		py := findPyArg(cmdArg, opt.Name)
@@ -142,7 +142,7 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*commandArgumen
 		fVal := val.FieldByIndex(arg.fieldIndex)
 		switch arg.dataType {
 		case cmdDataTypeDiskoiPath:
-			fVal.Set(reflect.ValueOf(data.Path))
+			fVal.Set(reflect.ValueOf(data.path))
 		default:
 			return reflect.Value{}, fmt.Errorf("unrecognized specialArgType %v in %s", arg.dataType, arg.fieldName)
 		}
