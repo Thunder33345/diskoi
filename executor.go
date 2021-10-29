@@ -24,6 +24,8 @@ type Executor struct {
 	cmdArg []*commandArgument
 	//cmdSpecialArg holds slice of special meta arguments
 	cmdSpecialArg []*specialArgument
+	//a chain of middlewares
+	middlewareChain MiddlewareChain
 }
 
 var _ Command = (*Executor)(nil)
@@ -69,15 +71,35 @@ func (e *Executor) As(name string, description string) *Executor {
 	}
 }
 
+func (e *Executor) SetChain(middlewareChain MiddlewareChain) {
+	e.m.Lock()
+	defer e.m.Unlock()
+	e.middlewareChain = middlewareChain
+}
+
+func (e *Executor) Chain() MiddlewareChain {
+	e.m.Lock()
+	defer e.m.Unlock()
+	return e.middlewareChain
+}
+
 func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
 	*Executor,
+	MiddlewareChain,
 	[]*discordgo.ApplicationCommandInteractionDataOption,
 	[]string,
 	error,
 ) {
-	return e, d.Options, []string{e.name}, nil
+	return e, e.middlewareChain, d.Options, []string{e.name}, nil
 }
 
+func (e *Executor) middleware() Middleware {
+	return func(r Request) error {
+		return e.execute(r.ses, r.ic, r.opts, r.meta)
+	}
+}
+
+//todo remove
 func (e *Executor) execute(
 	s *discordgo.Session,
 	i *discordgo.InteractionCreate,

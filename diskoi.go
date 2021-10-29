@@ -2,6 +2,7 @@ package diskoi
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"golang.org/x/net/context"
 	"sync"
 )
 
@@ -47,12 +48,20 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			d.getRawHandler()(s, i)
 			return
 		}
-		executor, options, path, err := e.executor(id)
+		executor, chain, options, path, err := e.executor(id)
 		if err != nil {
 			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
 			return
 		}
-		err = executor.execute(s, i, options, &MetaArgument{path: path})
+		err = chain.Then(executor.middleware())(Request{
+			ctx:  context.Background(),
+			ses:  s,
+			ic:   i,
+			opts: options,
+			meta: &MetaArgument{path: path},
+			exec: executor,
+		})
+		//err = executor.execute(s, i, options, &MetaArgument{path: path})
 		if err != nil {
 			d.getErrorHandler()(s, i, e, CommandExecutionError{name: executor.name, err: err})
 		}
@@ -67,7 +76,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			d.getRawHandler()(s, i)
 			return
 		}
-		executor, options, path, err := e.executor(id)
+		executor, _, options, path, err := e.executor(id)
 		if err != nil {
 			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
 			return

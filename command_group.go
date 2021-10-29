@@ -10,6 +10,8 @@ type SubcommandGroup struct {
 	description string
 	h           []*Executor
 	m           sync.RWMutex
+
+	middlewareChain MiddlewareChain
 }
 
 func NewSubcommandGroup(name string, description string) *SubcommandGroup {
@@ -17,6 +19,18 @@ func NewSubcommandGroup(name string, description string) *SubcommandGroup {
 		name:        name,
 		description: description,
 	}
+}
+
+func (c *SubcommandGroup) SetChain(middlewareChain MiddlewareChain) {
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.middlewareChain = middlewareChain
+}
+
+func (c *SubcommandGroup) Chain() MiddlewareChain {
+	c.m.RLock()
+	defer c.m.RUnlock()
+	return c.middlewareChain
 }
 
 func (c *SubcommandGroup) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
