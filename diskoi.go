@@ -17,6 +17,8 @@ type Diskoi struct {
 	m                 sync.Mutex
 	errorHandler      errorHandler
 	rawHandler        rawInteractionHandler
+
+	chain MiddlewareChain
 }
 
 func NewDiskoi() *Diskoi {
@@ -53,7 +55,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
 			return
 		}
-		err = chain.Then(executor.middleware())(Request{
+		err = d.Chain().Extend(chain).Then(executor.middleware())(Request{
 			ctx:  context.Background(),
 			ses:  s,
 			ic:   i,
@@ -61,7 +63,7 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			meta: &MetaArgument{path: path},
 			exec: executor,
 		})
-		//err = executor.execute(s, i, options, &MetaArgument{path: path})
+
 		if err != nil {
 			d.getErrorHandler()(s, i, e, CommandExecutionError{name: executor.name, err: err})
 		}
@@ -95,6 +97,18 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			d.getErrorHandler()(s, i, e, DiscordAPIError{err: err})
 		}
 	}
+}
+
+func (d *Diskoi) SetChain(middlewareChain MiddlewareChain) {
+	d.m.Lock()
+	defer d.m.Unlock()
+	d.chain = middlewareChain
+}
+
+func (d *Diskoi) Chain() MiddlewareChain {
+	d.m.Lock()
+	defer d.m.Unlock()
+	return d.chain
 }
 
 func (d *Diskoi) findRegisteredCmdById(id string) Command {

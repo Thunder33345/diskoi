@@ -13,7 +13,7 @@ type CommandGroup struct {
 	*SubcommandGroup
 	m sync.RWMutex
 
-	middlewareChain MiddlewareChain
+	chain MiddlewareChain
 }
 
 var _ Command = (*CommandGroup)(nil)
@@ -37,13 +37,13 @@ func (c *CommandGroup) Description() string {
 func (c *CommandGroup) SetChain(middlewareChain MiddlewareChain) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	c.middlewareChain = middlewareChain
+	c.chain = middlewareChain
 }
 
 func (c *CommandGroup) Chain() MiddlewareChain {
 	c.m.RLock()
 	defer c.m.RUnlock()
-	return c.middlewareChain
+	return c.chain
 }
 
 func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
@@ -57,7 +57,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 		return nil, MiddlewareChain{}, nil, nil, newDiscordExpectationError("missing options: expecting options given for command group, none given for" + errPath(path))
 	}
 	target := d.Options[0]
-	chain := c.middlewareChain
+	chain := c.chain
 
 	var group *SubcommandGroup
 	switch {
@@ -71,7 +71,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 		}
 		//if so we unwrap options to get the actual name
 		withMutex(&group.m, func() {
-			chain = chain.Extend(group.middlewareChain)
+			chain = chain.Extend(group.chain)
 		})
 		target = target.Options[0]
 	default:
