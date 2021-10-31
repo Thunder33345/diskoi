@@ -66,8 +66,8 @@ func analyzeAutocompleteFunction(fn interface{}, expTyp reflect.Type) ([]*fnArgu
 	}
 
 	if typ.Out(0) != rTypeCommandOptions {
-		return nil, fmt.Errorf(`given function(%s) should output "%s" not %s`,
-			signature(fn), rTypeCommandOptions.String(), typ.Out(1).String())
+		return nil, fmt.Errorf(`given function(%s) should output "%s" not "%s"`,
+			signature(fn), rTypeCommandOptions.String(), typ.Out(0).String())
 	}
 
 	return analyzeFunctionArgument(typ, expTyp)
@@ -108,6 +108,10 @@ func analyzeFunctionArgument(typ reflect.Type, expected reflect.Type) ([]*fnArgu
 			}
 			if at.Kind() == reflect.Ptr {
 				at = at.Elem()
+			}
+			if at.Kind() != reflect.Struct {
+				return nil, fmt.Errorf("unrecognized data struct argument %s(#%d) on function,"+
+					" should be type of struct for the last argument", original.String(), i)
 			}
 			if expected != nil && at != expected {
 				return nil, fmt.Errorf(`unexpected data struct type should be "%s" not "%s"`, expected.String(), at.String())
