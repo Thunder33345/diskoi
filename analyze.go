@@ -20,11 +20,20 @@ var (
 
 const applicationCommandOptionDouble = 10 //type doubles fixme get constant from discord go
 
-//analyzeCmdFn analyzes the function, and returns Data that can be executed
+//analyzeCmdFn analyzes a given function, insure it matches expected function signatures for an execution function
+//and calls analyzeFunctionArgument to analyze the function arguments
+//finally it loops thru arguments to find if a function have a command data struct, if so analyzes it to get the args
 //todo support function receiving context and executor
 //todo remove diskoi:"special:path" in favor of receiving MetaArgument or Request
 func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*commandArgument, []*specialArgument, error) {
-	fnArgs, err := analyzeFunction(fn)
+	typ := reflect.TypeOf(fn)
+	if typ.Kind() != reflect.Func {
+		return nil, nil, nil, nil, fmt.Errorf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String())
+	}
+	if typ.NumOut() != 0 {
+		return nil, nil, nil, nil, fmt.Errorf("given function(%s) has %d outputs, expecting 0", signature(fn), typ.NumOut())
+	}
+	fnArgs, err := analyzeFunctionArgument(reflect.TypeOf(fn), nil)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("analyzing function: %w", err)
 	}
@@ -43,18 +52,10 @@ func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*commandArgume
 	return fnArgs, cmdStruct, cmdArg, specialArg, nil
 }
 
-func analyzeFunction(fn interface{}) ([]*fnArgument, error) {
-	typ := reflect.TypeOf(fn)
-	if typ.Kind() != reflect.Func {
-		return nil, fmt.Errorf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String())
-	}
-	if typ.NumOut() != 0 {
-		return nil, fmt.Errorf("given function(%s) has %d outputs, expecting 0", signature(fn), typ.NumOut())
-	}
-
-	return analyzeFunctionArgument(typ, nil)
-}
-
+//analyzeCmdFn analyzes a given function, insure it matches expected function signatures for an autocomplete function
+//it also takes in an expected data type of the main executor
+//it returns analyzeFunctionArgument which returns a list of function arguments
+//it does not process the data struct as it can reuse the same analyzed data for the command struct
 func analyzeAutocompleteFunction(fn interface{}, expTyp reflect.Type) ([]*fnArgument, error) {
 	typ := reflect.TypeOf(fn)
 	if typ.Kind() != reflect.Func {
@@ -72,7 +73,12 @@ func analyzeAutocompleteFunction(fn interface{}, expTyp reflect.Type) ([]*fnArgu
 	return analyzeFunctionArgument(typ, expTyp)
 }
 
+//analyzeFunctionArgument analyzes a function's arguments and return a slice of analyzed arguments
+//it takes in expected and if it's not nil it expects the data struct(if exist) to be the same
 func analyzeFunctionArgument(typ reflect.Type, expected reflect.Type) ([]*fnArgument, error) {
+	if typ.Kind() != reflect.Func {
+		return nil, fmt.Errorf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String())
+	}
 	fnArgs := make([]*fnArgument, 0, typ.NumIn())
 	for i := 0; i < typ.NumIn(); i++ {
 		fna := &fnArgument{}
