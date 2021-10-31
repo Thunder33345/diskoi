@@ -1,26 +1,281 @@
 package diskoi
 
 import (
+	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/require"
+	"github.com/thunder33345/diskoi/interaction"
 	"reflect"
 	"regexp"
 	"testing"
 )
 
-type Embeddable1 struct {
-	FooChannel *discordgo.Channel
-	BarUser    *discordgo.User
-	Embeddable2
+func TestAnalyzeCmdFn(t *testing.T) {
+	cases := []struct {
+		name       string
+		fn         interface{}
+		wantType   reflect.Type
+		wantFnArgs []fnArgument
+		wantArgs   []commandArgument
+		wantSArgs  []specialArgument
+		wantErr    *regexp.Regexp
+	}{
+		{
+			name: "process",
+			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h interaction.Interaction, et EmbeddableTest) {
+			},
+			wantType: reflect.TypeOf(EmbeddableTest{}),
+			wantFnArgs: []fnArgument{{typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction},
+				{
+					typ:        fnArgumentTypeMarshal,
+					reflectTyp: reflect.TypeOf(interaction.Interaction{}),
+				},
+				{
+					typ:        fnArgumentTypeData,
+					reflectTyp: reflect.TypeOf(EmbeddableTest{}),
+				},
+			},
+			wantArgs: []commandArgument{
+				{
+					fieldIndex: []int{0},
+					fieldName:  "Test",
+					cType:      discordgo.ApplicationCommandOptionString,
+				}, {
+					fieldIndex: []int{1},
+					fieldName:  "Test2",
+					cType:      discordgo.ApplicationCommandOptionInteger,
+				}, {
+					fieldIndex: []int{2, 0},
+					fieldName:  "FooChannel",
+					cType:      discordgo.ApplicationCommandOptionChannel,
+				}, {
+					fieldIndex: []int{2, 1},
+					fieldName:  "BarUser",
+					cType:      discordgo.ApplicationCommandOptionUser,
+				}, {
+					fieldIndex: []int{2, 2, 0},
+					fieldName:  "FarRole",
+					cType:      discordgo.ApplicationCommandOptionRole,
+				}, {
+					fieldIndex: []int{2, 2, 1},
+					fieldName:  "RafInt",
+					cType:      discordgo.ApplicationCommandOptionInteger,
+				},
+			},
+			wantSArgs: []specialArgument{
+				{
+					fieldIndex: []int{3},
+					fieldName:  "SpecialPath",
+					dataType:   cmdDataTypeDiskoiPath,
+				},
+			},
+		}, {
+			name:    "err non func",
+			fn:      "foo",
+			wantErr: regexp.MustCompile("^given type .*?\\) is not type of func"),
+		}, {
+			name:    "err unexpected output",
+			fn:      func() string { return "" },
+			wantErr: regexp.MustCompile("^given function.*?\\) has .*? outputs, expecting 0"),
+		}, {
+			name:    "err in analyzing fn",
+			fn:      func(fail complex64) {},
+			wantErr: regexp.MustCompile("^analyzing function: unrecognized data struct argument"),
+		}, {
+			name:    "err in analyzing cmd data",
+			fn:      func(fail EmbeddableFail) {},
+			wantErr: regexp.MustCompile("^analyzing command data.*?\\): analyzing field"),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := require.New(t)
+			fnArgs, dType, cmdArg, cmdSpc, err := analyzeCmdFn(tc.fn)
+			if tc.wantErr != nil {
+				r.Regexp(tc.wantErr, err)
+			} else {
+				r.Nil(err)
+			}
+			r.Equal(tc.wantType, dType)
+			if len(tc.wantFnArgs) != 0 {
+				for i, arg := range tc.wantFnArgs {
+					got := fnArgs[i]
+					r.Equal(arg.typ, got.typ, fmt.Sprintf("expected fnArgumentType to be the same on: #%d", i))
+					r.Equal(arg.reflectTyp, got.reflectTyp, fmt.Sprintf("expected reflect type to be the same on: #%d", i))
+				}
+			} else {
+				r.Empty(fnArgs)
+			}
+
+			if tc.wantArgs != nil {
+				for i, wArg := range tc.wantArgs {
+					gArg := cmdArg[i]
+					r.Equal(wArg.fieldIndex, gArg.fieldIndex)
+					r.Equal(wArg.fieldName, gArg.fieldName)
+					r.Equal(wArg.cType, gArg.cType)
+				}
+			} else {
+				r.Empty(cmdArg)
+			}
+
+			if tc.wantSArgs != nil {
+				for i, wArg := range tc.wantSArgs {
+					gArg := cmdSpc[i]
+					r.Equal(wArg.fieldIndex, gArg.fieldIndex)
+					r.Equal(wArg.fieldName, gArg.fieldName)
+					r.Equal(wArg.dataType, gArg.dataType)
+				}
+			} else {
+				r.Empty(cmdSpc)
+			}
+		})
+	}
 }
 
-type Embeddable2 struct {
-	FarRole *discordgo.Role
-	RafInt  int
+func TestAnalyzeAutocompleteFunction(t *testing.T) {
+	cases := []struct {
+		name     string
+		fn       interface{}
+		expected reflect.Type
+
+		wantArg []fnArgument
+		wantErr *regexp.Regexp
+	}{
+		{
+			name: "simple",
+			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h interaction.Interaction, e Embeddable1,
+			) []*discordgo.ApplicationCommandOptionChoice {
+				panic("this should not be called")
+			},
+			expected: reflect.TypeOf(Embeddable1{}),
+			wantArg: []fnArgument{{typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction},
+				{
+					typ:        fnArgumentTypeMarshal,
+					reflectTyp: reflect.TypeOf(interaction.Interaction{}),
+				},
+				{
+					typ:        fnArgumentTypeData,
+					reflectTyp: reflect.TypeOf(Embeddable1{}),
+				},
+			},
+			wantErr: nil,
+		}, {
+			name:    "err non func",
+			fn:      "foo",
+			wantErr: regexp.MustCompile("^given type .*?\\) is not type of func"),
+		}, {
+			name:    "err no output",
+			fn:      func() {},
+			wantErr: regexp.MustCompile("^given function.*?\\) has .*? outputs, expecting 1"),
+		}, {
+			name:    "err wrong output",
+			fn:      func() string { return "" },
+			wantErr: regexp.MustCompile(`^given function.*?\) should output ".*?" not ".*?"`),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := require.New(t)
+			args, err := analyzeAutocompleteFunction(tc.fn, tc.expected)
+			if tc.wantErr != nil {
+				r.Regexp(tc.wantErr, err)
+			} else {
+				r.Nil(err)
+			}
+			if len(tc.wantArg) != 0 {
+				for i, arg := range tc.wantArg {
+					got := args[i]
+					r.Equal(arg.typ, got.typ, fmt.Sprintf("expected fnArgumentType to be the same on: #%d", i))
+					r.Equal(arg.reflectTyp, got.reflectTyp, fmt.Sprintf("expected reflect type to be the same on: #%d", i))
+				}
+			} else {
+				r.Empty(args)
+			}
+		})
+	}
 }
 
-type EmbeddableFail struct {
-	FooComplex complex64
+func TestAnalyzeFunctionArgument(t *testing.T) {
+	cases := []struct {
+		name     string
+		fn       reflect.Type
+		expected reflect.Type
+
+		wantArg []fnArgument
+		wantErr *regexp.Regexp
+	}{
+		{
+			name: "simple",
+			fn: reflect.TypeOf(func(s *discordgo.Session, i *discordgo.InteractionCreate, h interaction.Interaction, e Embeddable1) {
+			}),
+			expected: reflect.TypeOf(Embeddable1{}),
+			wantArg: []fnArgument{{typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction},
+				{
+					typ:        fnArgumentTypeMarshal,
+					reflectTyp: reflect.TypeOf(interaction.Interaction{}),
+				},
+				{
+					typ:        fnArgumentTypeData,
+					reflectTyp: reflect.TypeOf(Embeddable1{}),
+				},
+			},
+			wantErr: nil,
+		}, {
+			name: "ptr marshal",
+			fn: reflect.TypeOf(func(h *interaction.Interaction, e *Embeddable1) {
+			}),
+			expected: reflect.TypeOf(Embeddable1{}),
+			wantArg: []fnArgument{
+				{
+					typ:        fnArgumentTypeMarshalPtr,
+					reflectTyp: reflect.TypeOf(interaction.Interaction{}),
+				},
+				{
+					typ:        fnArgumentTypeData,
+					reflectTyp: reflect.TypeOf(Embeddable1{}),
+				},
+			},
+			wantErr: nil,
+		}, {
+			name:    "err non func",
+			fn:      reflect.TypeOf("foo"),
+			wantErr: regexp.MustCompile("^given type .*?\\) is not type of func"),
+		}, {
+			name:    "err command data out of order",
+			fn:      reflect.TypeOf(func(e Embeddable2, s *discordgo.Session) {}),
+			wantErr: regexp.MustCompile("^unrecognized argument .*?\\) on function, should be"),
+		}, {
+			name:    "err command data not struct",
+			fn:      reflect.TypeOf(func(s *discordgo.Session, c complex64) {}),
+			wantErr: regexp.MustCompile("^unrecognized data struct argument"),
+		}, {
+			name:     "err mismatch expectation",
+			fn:       reflect.TypeOf(func(s *discordgo.Session, e Embeddable2) {}),
+			expected: reflect.TypeOf(Embeddable1{}),
+			wantErr:  regexp.MustCompile(`^unexpected data struct type should be .*`),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := require.New(t)
+			args, err := analyzeFunctionArgument(tc.fn, tc.expected)
+			if tc.wantErr != nil {
+				r.Regexp(tc.wantErr, err)
+			} else {
+				r.Nil(err)
+			}
+			if len(tc.wantArg) != 0 {
+				for i, arg := range tc.wantArg {
+					got := args[i]
+					r.Equal(arg.typ, got.typ, fmt.Sprintf("expected fnArgumentType to be the same on: #%d", i))
+					r.Equal(arg.reflectTyp, got.reflectTyp, fmt.Sprintf("expected reflect type to be the same on: #%d", i))
+				}
+			} else {
+				r.Empty(args)
+			}
+		})
+	}
 }
 
 func TestAnalyzeCommandStruct(t *testing.T) {
@@ -34,12 +289,7 @@ func TestAnalyzeCommandStruct(t *testing.T) {
 	}{
 		{
 			name: "general test",
-			typ: reflect.TypeOf(struct {
-				Test  string
-				Test2 int
-				Embeddable1
-				SpecialPath []string `diskoi:"special:path"`
-			}{}),
+			typ:  reflect.TypeOf(EmbeddableTest{}),
 			wantCmdArg: []commandArgument{
 				{
 					fieldIndex: []int{0},
@@ -296,4 +546,26 @@ func (i InterfaceTestingStruct) DiskoiCommandOptions() []*discordgo.ApplicationC
 
 func (i InterfaceTestingStruct) DiskoiChannelTypes() []discordgo.ChannelType {
 	return []discordgo.ChannelType{discordgo.ChannelTypeGuildText, discordgo.ChannelTypeDM}
+}
+
+type Embeddable1 struct {
+	FooChannel *discordgo.Channel
+	BarUser    *discordgo.User
+	Embeddable2
+}
+
+type Embeddable2 struct {
+	FarRole *discordgo.Role
+	RafInt  int
+}
+
+type EmbeddableFail struct {
+	FooComplex complex64
+}
+
+type EmbeddableTest struct {
+	Test  string
+	Test2 int
+	Embeddable1
+	SpecialPath []string `diskoi:"special:path"`
 }
