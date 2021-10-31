@@ -192,7 +192,9 @@ func analyzeCommandArgumentField(f reflect.StructField) (*commandArgument, *spec
 						arg.Required = b
 					}
 				case "special":
-					sp := &specialArgument{}
+					sp := &specialArgument{
+						fieldName: f.Name,
+					}
 					switch value {
 					case "path":
 						sp.dataType = cmdDataTypeDiskoiPath
