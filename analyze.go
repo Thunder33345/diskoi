@@ -21,6 +21,8 @@ var (
 const applicationCommandOptionDouble = 10 //type doubles fixme get constant from discord go
 
 //analyzeCmdFn analyzes the function, and returns Data that can be executed
+//todo support function receiving context and executor
+//todo remove diskoi:"special:path" in favor of receiving MetaArgument or Request
 func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*commandArgument, []*specialArgument, error) {
 	fnArgs, err := analyzeFunction(fn)
 	if err != nil {
@@ -112,7 +114,11 @@ func analyzeFunctionArgument(typ reflect.Type, expected reflect.Type) ([]*fnArgu
 	return fnArgs, nil
 }
 
-//analyzeCommandStruct analyzes a struct and create slice of commandArgument and specialArgument
+//analyzeCommandStruct analyzes the fields of given struct and recursively path into embedded structs
+//it calls analyzeCommandArgumentField for each field
+//and return the total of all encountered commandArgument and specialArgument in one slice
+//the typ is a "reflect.typeof" command struct
+//the second pre []int is the prefix of current depth, which should be nothing when calling it, and only used internally
 func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*commandArgument, []*specialArgument, error) {
 	cmdArgs := make([]*commandArgument, 0, typ.NumField())
 	spcArgs := make([]*specialArgument, 0, 1)
@@ -154,7 +160,9 @@ func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*commandArgument, []*s
 
 const magicTag = "diskoi"
 
-//analyzeCommandArgumentField analyze a command struct field and return commandArgument or specialArgument
+//analyzeCommandArgumentField analyze a "reflect.StructField"
+//and returns either commandArgument or specialArgument for said field
+//this is iteratively called by analyzeCommandStruct for each field discovered inside the command struct
 func analyzeCommandArgumentField(f reflect.StructField) (*commandArgument, *specialArgument, error) {
 	tag, ok := f.Tag.Lookup(magicTag)
 

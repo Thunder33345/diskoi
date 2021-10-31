@@ -8,6 +8,126 @@ import (
 	"testing"
 )
 
+type Embeddable1 struct {
+	FooChannel *discordgo.Channel
+	BarUser    *discordgo.User
+	Embeddable2
+}
+
+type Embeddable2 struct {
+	FarRole *discordgo.Role
+	RafInt  int
+}
+
+type EmbeddableFail struct {
+	FooComplex complex64
+}
+
+func TestAnalyzeCommandStruct(t *testing.T) {
+	cases := []struct {
+		name string
+		typ  reflect.Type
+
+		wantCmdArg  []commandArgument
+		wantSpecial []specialArgument
+		errRegex    *regexp.Regexp
+	}{
+		{
+			name: "general test",
+			typ: reflect.TypeOf(struct {
+				Test  string
+				Test2 int
+				Embeddable1
+				SpecialPath []string `diskoi:"special:path"`
+			}{}),
+			wantCmdArg: []commandArgument{
+				{
+					fieldIndex: []int{0},
+					fieldName:  "Test",
+					cType:      discordgo.ApplicationCommandOptionString,
+				}, {
+					fieldIndex: []int{1},
+					fieldName:  "Test2",
+					cType:      discordgo.ApplicationCommandOptionInteger,
+				}, {
+					fieldIndex: []int{2, 0},
+					fieldName:  "FooChannel",
+					cType:      discordgo.ApplicationCommandOptionChannel,
+				}, {
+					fieldIndex: []int{2, 1},
+					fieldName:  "BarUser",
+					cType:      discordgo.ApplicationCommandOptionUser,
+				}, {
+					fieldIndex: []int{2, 2, 0},
+					fieldName:  "FarRole",
+					cType:      discordgo.ApplicationCommandOptionRole,
+				}, {
+					fieldIndex: []int{2, 2, 1},
+					fieldName:  "RafInt",
+					cType:      discordgo.ApplicationCommandOptionInteger,
+				},
+			},
+			wantSpecial: []specialArgument{
+				{
+					fieldIndex: []int{3},
+					fieldName:  "SpecialPath",
+					dataType:   cmdDataTypeDiskoiPath,
+				},
+			},
+		}, {
+			name: "err test unexported",
+			typ: reflect.TypeOf(struct {
+				foo int
+			}{}),
+			errRegex: regexp.MustCompile(`^unsupported unexported field in ".*?\.foo"`),
+		}, {
+			name: "err test anon ptr",
+			typ: reflect.TypeOf(struct {
+				*Embeddable1
+			}{}),
+			errRegex: regexp.MustCompile(`^unsupported anonymous field with pointer in ".*?"`),
+		}, {
+			name: "err test nested",
+			typ: reflect.TypeOf(struct {
+				EmbeddableFail
+			}{}),
+			errRegex: regexp.MustCompile(`^in ".*?": analyzing field "diskoi.EmbeddableFail.FooComplex": unsupported kind "complex64"`),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := require.New(t)
+			cmd, spc, err := analyzeCommandStruct(tc.typ, []int{})
+			if tc.errRegex != nil {
+				r.Regexp(tc.errRegex, err)
+			} else {
+				r.Nil(err)
+			}
+			if tc.wantCmdArg != nil {
+				for i, wArg := range tc.wantCmdArg {
+					gArg := cmd[i]
+					r.Equal(wArg.fieldIndex, gArg.fieldIndex)
+					r.Equal(wArg.fieldName, gArg.fieldName)
+					r.Equal(wArg.cType, gArg.cType)
+				}
+			} else {
+				r.Empty(cmd)
+			}
+
+			if tc.wantSpecial != nil {
+				for i, wArg := range tc.wantSpecial {
+					gArg := spc[i]
+					r.Equal(wArg.fieldIndex, gArg.fieldIndex)
+					r.Equal(wArg.fieldName, gArg.fieldName)
+					r.Equal(wArg.dataType, gArg.dataType)
+				}
+			} else {
+				r.Empty(spc)
+			}
+		})
+	}
+}
+
 func TestAnalyzeCommandArgumentField(t *testing.T) {
 	cases := []struct {
 		name         string
