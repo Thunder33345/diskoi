@@ -124,7 +124,7 @@ func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*commandArgument, []*s
 		}
 		if f.Anonymous {
 			if f.Type.Kind() == reflect.Ptr {
-				return nil, nil, fmt.Errorf(`unsupported pointered anonymous field in "%s.%s"`, typ.String(), f.Name)
+				return nil, nil, fmt.Errorf(`unsupported anonymous field with pointer in "%s.%s"`, typ.String(), f.Name)
 			}
 			a, s, err := analyzeCommandStruct(f.Type, pos)
 			if err != nil {
