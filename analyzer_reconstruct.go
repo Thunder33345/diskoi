@@ -1,12 +1,13 @@
 package diskoi
 
 import (
+	"context"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"reflect"
 )
 
-func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *MetaArgument,
+func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *MetaArgument, ctx context.Context,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption) ([]reflect.Value, error) {
 	values := make([]reflect.Value, 0, len(fnArg))
@@ -16,6 +17,16 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmd
 			values = append(values, reflect.ValueOf(s))
 		case fnArgumentTypeInteraction:
 			values = append(values, reflect.ValueOf(i))
+		case fnArgumentTypeData:
+			v, err := reconstructCommandArgument(arg.reflectTyp, cmdArg, cmdSpecialArg, s, i, o, data)
+			if err != nil {
+				return nil, fmt.Errorf(`reconstructing command data "%s": %w`, arg.reflectTyp.String(), err)
+			}
+			values = append(values, v)
+		case fnArgumentTypeMeta:
+			values = append(values, reflect.ValueOf(data))
+		case fnArgumentTypeContext:
+			values = append(values, reflect.ValueOf(ctx))
 		case fnArgumentTypeMarshal, fnArgumentTypeMarshalPtr:
 			mt := reflect.New(arg.reflectTyp)
 			m := mt.Interface().(Unmarshal)
@@ -28,18 +39,13 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmd
 			} else {
 				values = append(values, reflect.ValueOf(m).Elem())
 			}
-		case fnArgumentTypeData:
-			v, err := reconstructCommandArgument(arg.reflectTyp, cmdArg, cmdSpecialArg, s, i, o, data)
-			if err != nil {
-				return nil, fmt.Errorf(`reconstructing command data "%s": %w`, arg.reflectTyp.String(), err)
-			}
-			values = append(values, v)
 		default:
 			return nil, fmt.Errorf("unrecognized argument type #%d (%s)", uint(arg.typ), arg.typ.String())
 		}
 	}
 	return values, nil
 }
+
 func reconstructAutocompleteArgs(cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *MetaArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption) (*commandArgument, []reflect.Value, error) {
@@ -63,7 +69,8 @@ func reconstructAutocompleteArgs(cmdArg []*commandArgument, cmdSpecialArg []*spe
 			return nil, nil, newDiscordExpectationError(fmt.Sprintf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
 				arg.fieldName, arg.cType, opt.Type))
 		}
-		values, err := reconstructFunctionArgs(arg.autocompleteArgs, cmdArg, cmdSpecialArg, data, s, i, opts)
+
+		values, err := reconstructFunctionArgs(arg.autocompleteArgs, cmdArg, cmdSpecialArg, data, context.Background(), s, i, opts)
 		if err != nil {
 			return nil, nil, fmt.Errorf("reconstructing autocomplete: %w", err)
 		}

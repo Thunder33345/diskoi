@@ -1,6 +1,7 @@
 package diskoi
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
@@ -10,9 +11,12 @@ import (
 )
 
 var (
-	rTypeSession         = reflect.TypeOf((*discordgo.Session)(nil))
-	rTypeInteractCreate  = reflect.TypeOf((*discordgo.InteractionCreate)(nil))
-	rTypeCommandOptions  = reflect.TypeOf([]*discordgo.ApplicationCommandOptionChoice(nil))
+	rTypeSession        = reflect.TypeOf((*discordgo.Session)(nil))
+	rTypeInteractCreate = reflect.TypeOf((*discordgo.InteractionCreate)(nil))
+	rTypeCommandOptions = reflect.TypeOf([]*discordgo.ApplicationCommandOptionChoice(nil))
+	rTypeMeta           = reflect.TypeOf((*MetaArgument)(nil))
+	rTypeContext        = reflect.TypeOf(context.Context(nil))
+
 	rTypeIUnmarshal      = reflect.TypeOf((*Unmarshal)(nil)).Elem()
 	rTypeIChannelType    = reflect.TypeOf((*ChannelType)(nil)).Elem()
 	rTypeICommandOptions = reflect.TypeOf((*CommandOptions)(nil)).Elem()
@@ -23,7 +27,6 @@ const applicationCommandOptionDouble = 10 //type doubles fixme get constant from
 //analyzeCmdFn analyzes a given function, insure it matches expected function signatures for an execution function
 //and calls analyzeFunctionArgument to analyze the function arguments
 //finally it loops thru arguments to find if a function have a command data struct, if so analyzes it to get the args
-//todo support function receiving context and executor
 //todo remove diskoi:"special:path" in favor of receiving MetaArgument or Request
 func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*commandArgument, []*specialArgument, error) {
 	typ := reflect.TypeOf(fn)
@@ -93,6 +96,10 @@ func analyzeFunctionArgument(typ reflect.Type, expected reflect.Type) ([]*fnArgu
 			fna.typ = fnArgumentTypeSession
 		case at == rTypeInteractCreate:
 			fna.typ = fnArgumentTypeInteraction
+		case at == rTypeMeta:
+			fna.typ = fnArgumentTypeMeta
+		case at == rTypeContext:
+			fna.typ = fnArgumentTypeContext
 		case atp.Implements(rTypeIUnmarshal):
 			if at.Kind() == reflect.Ptr {
 				fna.typ = fnArgumentTypeMarshalPtr
@@ -104,7 +111,7 @@ func analyzeFunctionArgument(typ reflect.Type, expected reflect.Type) ([]*fnArgu
 		default:
 			if i < typ.NumIn()-1 { //maybe some day data struct won't have to be the last arg
 				return nil, fmt.Errorf("unrecognized argument %s(#%d) on function, "+
-					"should be *discordgo.Session, *discordgo.InteractionCreate or something that implement diskoi.Unmarshal", original.String(), i)
+					"should be *discordgo.Session, *discordgo.InteractionCreate, *MetaArgument or something that implement diskoi.Unmarshal", original.String(), i)
 			}
 			if at.Kind() == reflect.Ptr {
 				at = at.Elem()

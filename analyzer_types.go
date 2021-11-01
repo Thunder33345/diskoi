@@ -19,6 +19,8 @@ const (
 	fnArgumentTypeSession
 	fnArgumentTypeInteraction
 	fnArgumentTypeData
+	fnArgumentTypeMeta
+	fnArgumentTypeContext
 	fnArgumentTypeMarshal
 	fnArgumentTypeMarshalPtr
 )
@@ -31,8 +33,16 @@ func (a fnArgumentType) String() string {
 		return "Session"
 	case fnArgumentTypeInteraction:
 		return "InteractionCreate"
+	case fnArgumentTypeData:
+		return "Command Data"
+	case fnArgumentTypeMeta:
+		return "MetaArgument"
+	case fnArgumentTypeContext:
+		return "Context"
 	case fnArgumentTypeMarshal:
 		return "DiskoiMarshal"
+	case fnArgumentTypeMarshalPtr:
+		return "DiskoiMarshalPtr"
 	default:
 		return fmt.Sprintf("fnArgumentType(%d)", a)
 	}
@@ -53,7 +63,7 @@ type commandArgument struct {
 	autocompleteArgs []*fnArgument
 }
 
-type specialArgument struct {
+type specialArgument struct { //todo nuke this type in second commit pass
 	fieldIndex []int
 	fieldName  string
 	dataType   specialArgType

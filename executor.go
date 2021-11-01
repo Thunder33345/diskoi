@@ -3,6 +3,7 @@ package diskoi
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"golang.org/x/net/context"
 	"reflect"
 	"sync"
 )
@@ -107,7 +108,7 @@ func (e *Executor) execute(
 	opts []*discordgo.ApplicationCommandInteractionDataOption,
 	meta *MetaArgument,
 ) error {
-	values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, e.cmdSpecialArg, meta, s, i, opts)
+	values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, e.cmdSpecialArg, meta, context.Background(), s, i, opts)
 	if err != nil {
 		return fmt.Errorf(`error reconstructing command "%s": %w`, e.name, err)
 	}
