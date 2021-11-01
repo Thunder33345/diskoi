@@ -71,10 +71,11 @@ func (e *Executor) As(name string, description string) *Executor {
 	}
 }
 
-func (e *Executor) SetChain(middlewareChain MiddlewareChain) {
+func (e *Executor) SetChain(middlewareChain MiddlewareChain) *Executor {
 	e.m.Lock()
 	defer e.m.Unlock()
 	e.chain = middlewareChain
+	return e
 }
 
 func (e *Executor) Chain() MiddlewareChain {
@@ -249,7 +250,7 @@ func (e *Executor) SetChannelTypes(fieldName string, ChannelTypes []discordgo.Ch
 	return nil
 }
 
-func (e *Executor) MustChannelTypes(fieldName string, ChannelTypes []discordgo.ChannelType) *Executor {
+func (e *Executor) MustSetChannelTypes(fieldName string, ChannelTypes []discordgo.ChannelType) *Executor {
 	err := e.SetChannelTypes(fieldName, ChannelTypes)
 	if err != nil {
 		panic(fmt.Errorf("error setting channel types: %w", err))

@@ -6,7 +6,7 @@ require (
 	github.com/bwmarrin/discordgo v0.23.3-0.20211010150959-f0b7e81468f7
 	github.com/davecgh/go-spew v1.1.1
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/net v0.0.0-20211029160332-540bb53d3b2e
+	golang.org/x/net v0.0.0-20211029224645-99673261e6eb
 )
 
 require (
