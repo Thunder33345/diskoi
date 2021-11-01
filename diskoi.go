@@ -18,7 +18,7 @@ type Diskoi struct {
 	errorHandler      errorHandler
 	rawHandler        rawInteractionHandler
 
-	chain MiddlewareChain
+	chain Chain
 }
 
 func NewDiskoi() *Diskoi {
@@ -99,13 +99,13 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
-func (d *Diskoi) SetChain(middlewareChain MiddlewareChain) {
+func (d *Diskoi) SetChain(chain Chain) {
 	d.m.Lock()
 	defer d.m.Unlock()
-	d.chain = middlewareChain
+	d.chain = chain
 }
 
-func (d *Diskoi) Chain() MiddlewareChain {
+func (d *Diskoi) Chain() Chain {
 	d.m.Lock()
 	defer d.m.Unlock()
 	return d.chain

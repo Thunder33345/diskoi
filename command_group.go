@@ -11,7 +11,7 @@ type SubcommandGroup struct {
 	h           []*Executor
 	m           sync.RWMutex
 
-	chain MiddlewareChain
+	chain Chain
 }
 
 func NewSubcommandGroup(name string, description string) *SubcommandGroup {
@@ -21,13 +21,13 @@ func NewSubcommandGroup(name string, description string) *SubcommandGroup {
 	}
 }
 
-func (c *SubcommandGroup) SetChain(middlewareChain MiddlewareChain) {
+func (c *SubcommandGroup) SetChain(chain Chain) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	c.chain = middlewareChain
+	c.chain = chain
 }
 
-func (c *SubcommandGroup) Chain() MiddlewareChain {
+func (c *SubcommandGroup) Chain() Chain {
 	c.m.RLock()
 	defer c.m.RUnlock()
 	return c.chain

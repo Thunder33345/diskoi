@@ -13,7 +13,7 @@ type CommandGroup struct {
 	*SubcommandGroup
 	m sync.RWMutex
 
-	chain MiddlewareChain
+	chain Chain
 }
 
 var _ Command = (*CommandGroup)(nil)
@@ -34,27 +34,27 @@ func (c *CommandGroup) Description() string {
 	return c.description
 }
 
-func (c *CommandGroup) SetChain(middlewareChain MiddlewareChain) {
+func (c *CommandGroup) SetChain(chain Chain) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	c.chain = middlewareChain
+	c.chain = chain
 }
 
-func (c *CommandGroup) Chain() MiddlewareChain {
+func (c *CommandGroup) Chain() Chain {
 	c.m.RLock()
 	defer c.m.RUnlock()
 	return c.chain
 }
 
 func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
-	*Executor, MiddlewareChain, []*discordgo.ApplicationCommandInteractionDataOption, []string, error,
+	*Executor, Chain, []*discordgo.ApplicationCommandInteractionDataOption, []string, error,
 ) {
 	c.m.RLock()
 	defer c.m.RUnlock()
 	path := make([]string, 0, 3)
 	path = append(path, c.name)
 	if len(d.Options) <= 0 {
-		return nil, MiddlewareChain{}, nil, nil, newDiscordExpectationError("missing options: expecting options given for command group, none given for" + errPath(path))
+		return nil, Chain{}, nil, nil, newDiscordExpectationError("missing options: expecting options given for command group, none given for" + errPath(path))
 	}
 	target := d.Options[0]
 	chain := c.chain
@@ -67,7 +67,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 		group, _ = c.findGroup(target.Name)
 		path = append(path, target.Name)
 		if group == nil {
-			return nil, MiddlewareChain{}, nil, nil, fmt.Errorf(`missing subcommand group: group "%s" not found on %s`, target.Name, errPath(path))
+			return nil, Chain{}, nil, nil, fmt.Errorf(`missing subcommand group: group "%s" not found on %s`, target.Name, errPath(path))
 		}
 		//if so we unwrap options to get the actual name
 		withMutex(&group.m, func() {
@@ -75,7 +75,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 		})
 		target = target.Options[0]
 	default:
-		return nil, MiddlewareChain{}, nil, nil, newDiscordExpectationError(fmt.Sprintf(
+		return nil, Chain{}, nil, nil, newDiscordExpectationError(fmt.Sprintf(
 			`non command option type: expecting "SubCommand" or "SubCommandGroup" command option type but received "%s" for %s`,
 			target.Type.String(), errPath(path)))
 	}
@@ -88,7 +88,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	if sub != nil {
 		return sub, chain, target.Options, path, nil
 	}
-	return nil, MiddlewareChain{}, nil, nil, fmt.Errorf(`missing subcommand: subcommand "%s" not found on %s`, target.Name, errPath(path))
+	return nil, Chain{}, nil, nil, fmt.Errorf(`missing subcommand: subcommand "%s" not found on %s`, target.Name, errPath(path))
 }
 
 func withMutex(m *sync.RWMutex, f func()) {

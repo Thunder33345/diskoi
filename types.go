@@ -9,7 +9,7 @@ type Command interface {
 	Description() string
 	executor(d discordgo.ApplicationCommandInteractionData) (
 		executor *Executor,
-		middleware MiddlewareChain,
+		chain Chain,
 		options []*discordgo.ApplicationCommandInteractionDataOption,
 		path []string,
 		err error,

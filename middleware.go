@@ -49,30 +49,30 @@ func (c *Request) Executor() *Executor {
 }
 
 type Middleware func(r Request) error
-type MiddlewareBuilder func(next Middleware) Middleware
+type Chainer func(next Middleware) Middleware
 
-type MiddlewareChain struct {
-	builders []MiddlewareBuilder
+type Chain struct {
+	builders []Chainer
 }
 
-func NewMiddlewareChain(builders ...MiddlewareBuilder) MiddlewareChain {
-	return MiddlewareChain{builders: builders}
+func NewChain(builders ...Chainer) Chain {
+	return Chain{builders: builders}
 }
 
-func (c MiddlewareChain) Then(m Middleware) Middleware {
+func (c Chain) Then(m Middleware) Middleware {
 	for i := len(c.builders) - 1; i >= 0; i-- {
 		m = c.builders[i](m)
 	}
 	return m
 }
 
-func (c MiddlewareChain) Append(builders ...MiddlewareBuilder) MiddlewareChain {
-	nc := make([]MiddlewareBuilder, 0, len(c.builders)+len(builders))
+func (c Chain) Append(builders ...Chainer) Chain {
+	nc := make([]Chainer, 0, len(c.builders)+len(builders))
 	nc = append(nc, c.builders...)
 	nc = append(nc, builders...)
-	return MiddlewareChain{builders: nc}
+	return Chain{builders: nc}
 }
 
-func (c MiddlewareChain) Extend(chain MiddlewareChain) MiddlewareChain {
+func (c Chain) Extend(chain Chain) Chain {
 	return c.Append(chain.builders...)
 }
