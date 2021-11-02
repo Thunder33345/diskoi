@@ -1,6 +1,7 @@
 package diskoi
 
 import (
+	"context"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/require"
@@ -17,7 +18,6 @@ func TestAnalyzeCmdFn(t *testing.T) {
 		wantType   reflect.Type
 		wantFnArgs []fnArgument
 		wantArgs   []commandArgument
-		wantSArgs  []specialArgument
 		wantErr    *regexp.Regexp
 	}{
 		{
@@ -62,13 +62,6 @@ func TestAnalyzeCmdFn(t *testing.T) {
 					cType:      discordgo.ApplicationCommandOptionInteger,
 				},
 			},
-			wantSArgs: []specialArgument{
-				{
-					fieldIndex: []int{3},
-					fieldName:  "SpecialPath",
-					dataType:   cmdDataTypeDiskoiPath,
-				},
-			},
 		}, {
 			name:    "err non func",
 			fn:      "foo",
@@ -90,7 +83,7 @@ func TestAnalyzeCmdFn(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := require.New(t)
-			fnArgs, dType, cmdArg, cmdSpc, err := analyzeCmdFn(tc.fn)
+			fnArgs, dType, cmdArg, err := analyzeCmdFn(tc.fn)
 			if tc.wantErr != nil {
 				r.Regexp(tc.wantErr, err)
 			} else {
@@ -116,17 +109,6 @@ func TestAnalyzeCmdFn(t *testing.T) {
 				}
 			} else {
 				r.Empty(cmdArg)
-			}
-
-			if tc.wantSArgs != nil {
-				for i, wArg := range tc.wantSArgs {
-					gArg := cmdSpc[i]
-					r.Equal(wArg.fieldIndex, gArg.fieldIndex)
-					r.Equal(wArg.fieldName, gArg.fieldName)
-					r.Equal(wArg.dataType, gArg.dataType)
-				}
-			} else {
-				r.Empty(cmdSpc)
 			}
 		})
 	}
@@ -220,7 +202,36 @@ func TestAnalyzeFunctionArgument(t *testing.T) {
 					reflectTyp: reflect.TypeOf(Embeddable1{}),
 				},
 			},
-			wantErr: nil,
+		}, {
+			name: "extra",
+			fn: reflect.TypeOf(func(s *discordgo.Session, i *discordgo.InteractionCreate, ctx context.Context, m *MetaArgument, e Embeddable1) {
+			}),
+			expected: reflect.TypeOf(Embeddable1{}),
+			wantArg: []fnArgument{{typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction}, {typ: fnArgumentTypeContext}, {typ: fnArgumentTypeMeta},
+				{
+					typ:        fnArgumentTypeData,
+					reflectTyp: reflect.TypeOf(Embeddable1{}),
+				},
+			},
+		}, {
+			name: "missing meta ptr",
+			fn: reflect.TypeOf(func(m MetaArgument, e Embeddable1) {
+			}),
+			expected: reflect.TypeOf(Embeddable1{}),
+			wantErr:  regexp.MustCompile(`^unrecognized argument diskoi\.MetaArgument`),
+		}, {
+			name: "duplicated",
+			fn: reflect.TypeOf(func(ctx1 context.Context, s *discordgo.Session, i *discordgo.InteractionCreate,
+				ctx context.Context, m *MetaArgument, m2 *MetaArgument, e Embeddable2) {
+			}),
+			expected: reflect.TypeOf(Embeddable2{}),
+			wantArg: []fnArgument{{typ: fnArgumentTypeContext}, {typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction},
+				{typ: fnArgumentTypeContext}, {typ: fnArgumentTypeMeta}, {typ: fnArgumentTypeMeta},
+				{
+					typ:        fnArgumentTypeData,
+					reflectTyp: reflect.TypeOf(Embeddable2{}),
+				},
+			},
 		}, {
 			name: "ptr marshal",
 			fn: reflect.TypeOf(func(h *interaction.Interaction, e *Embeddable1) {
@@ -236,7 +247,6 @@ func TestAnalyzeFunctionArgument(t *testing.T) {
 					reflectTyp: reflect.TypeOf(Embeddable1{}),
 				},
 			},
-			wantErr: nil,
 		}, {
 			name:    "err non func",
 			fn:      reflect.TypeOf("foo"),
@@ -266,6 +276,7 @@ func TestAnalyzeFunctionArgument(t *testing.T) {
 				r.Nil(err)
 			}
 			if len(tc.wantArg) != 0 {
+				r.Equal(len(tc.wantArg), len(args), "results and want argument length should be equal")
 				for i, arg := range tc.wantArg {
 					got := args[i]
 					r.Equal(arg.typ, got.typ, fmt.Sprintf("expected fnArgumentType to be the same on: #%d", i))
@@ -283,9 +294,8 @@ func TestAnalyzeCommandStruct(t *testing.T) {
 		name string
 		typ  reflect.Type
 
-		wantCmdArg  []commandArgument
-		wantSpecial []specialArgument
-		errRegex    *regexp.Regexp
+		wantCmdArg []commandArgument
+		errRegex   *regexp.Regexp
 	}{
 		{
 			name: "general test",
@@ -317,13 +327,6 @@ func TestAnalyzeCommandStruct(t *testing.T) {
 					cType:      discordgo.ApplicationCommandOptionInteger,
 				},
 			},
-			wantSpecial: []specialArgument{
-				{
-					fieldIndex: []int{3},
-					fieldName:  "SpecialPath",
-					dataType:   cmdDataTypeDiskoiPath,
-				},
-			},
 		}, {
 			name: "err test unexported",
 			typ: reflect.TypeOf(struct {
@@ -347,7 +350,7 @@ func TestAnalyzeCommandStruct(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := require.New(t)
-			cmd, spc, err := analyzeCommandStruct(tc.typ, []int{})
+			cmd, err := analyzeCommandStruct(tc.typ, []int{})
 			if tc.errRegex != nil {
 				r.Regexp(tc.errRegex, err)
 			} else {
@@ -363,17 +366,6 @@ func TestAnalyzeCommandStruct(t *testing.T) {
 			} else {
 				r.Empty(cmd)
 			}
-
-			if tc.wantSpecial != nil {
-				for i, wArg := range tc.wantSpecial {
-					gArg := spc[i]
-					r.Equal(wArg.fieldIndex, gArg.fieldIndex)
-					r.Equal(wArg.fieldName, gArg.fieldName)
-					r.Equal(wArg.dataType, gArg.dataType)
-				}
-			} else {
-				r.Empty(spc)
-			}
 		})
 	}
 }
@@ -383,7 +375,6 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 		name         string
 		in           reflect.StructField
 		cmd          *commandArgument
-		special      *specialArgument
 		wantErr      bool
 		wantErrRegex *regexp.Regexp
 	}{
@@ -471,21 +462,10 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 			wantErr:      true,
 			wantErrRegex: regexp.MustCompile("^converting \".*?\" into bool: "),
 		}, {
-			name: "test special",
-			in:   reflect.StructField{Tag: `diskoi:"special:path"`, Type: reflect.TypeOf(([]string)(nil))},
-			special: &specialArgument{
-				dataType: cmdDataTypeDiskoiPath,
-			},
-		}, {
-			name:         "test special invalid receiver",
-			in:           reflect.StructField{Tag: `diskoi:"special:path"`, Type: reflect.TypeOf(([]int)(nil))},
-			wantErr:      true,
-			wantErrRegex: regexp.MustCompile("^invalid reciever type \""),
-		}, {
-			name:         "test special fail",
+			name:         "test special unrecognized",
 			in:           reflect.StructField{Tag: `diskoi:"special:foobar"`, Type: reflect.TypeOf((*string)(nil))},
 			wantErr:      true,
-			wantErrRegex: regexp.MustCompile("^unrecognized special tag with value"),
+			wantErrRegex: regexp.MustCompile(`^unrecognized tag "special" with value "foobar"`),
 		}, {
 			name:         "test unrecognizable struct",
 			in:           reflect.StructField{Tag: `diskoi:"name:foo"`, Type: reflect.TypeOf((*commandArgument)(nil))},
@@ -502,7 +482,7 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r := require.New(t)
 
-			cmd, special, err := analyzeCommandArgumentField(tc.in)
+			cmd, err := analyzeCommandArgumentField(tc.in)
 			if tc.wantErr {
 				r.Error(err)
 				if tc.wantErrRegex != nil {
@@ -516,11 +496,6 @@ func TestAnalyzeCommandArgumentField(t *testing.T) {
 			} else {
 				r.Nil(cmd)
 			}
-			if tc.special != nil {
-				r.EqualValues(tc.special, special)
-			} else {
-				r.Nil(special)
-			}
 		})
 	}
 }
@@ -530,8 +505,7 @@ func TestAnalyzeCommandArgumentFieldInterface(t *testing.T) {
 	field := reflect.StructField{
 		Type: reflect.TypeOf(&InterfaceTestingStruct{}),
 	}
-	arg, special, err := analyzeCommandArgumentField(field)
-	r.Nil(special)
+	arg, err := analyzeCommandArgumentField(field)
 	r.Nil(err)
 	r.EqualValues([]discordgo.ChannelType{discordgo.ChannelTypeGuildText, discordgo.ChannelTypeDM}, arg.ChannelTypes)
 	r.EqualValues([]*discordgo.ApplicationCommandOptionChoice{{Name: "one", Value: 1}, {Name: "two", Value: 2}}, arg.Choices)
@@ -567,5 +541,4 @@ type EmbeddableTest struct {
 	Test  string
 	Test2 int
 	Embeddable1
-	SpecialPath []string `diskoi:"special:path"`
 }
