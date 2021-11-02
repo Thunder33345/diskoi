@@ -63,18 +63,6 @@ type commandArgument struct {
 	autocompleteArgs []*fnArgument
 }
 
-type specialArgument struct { //todo nuke this type in second commit pass
-	fieldIndex []int
-	fieldName  string
-	dataType   specialArgType
-}
-
-type specialArgType uint8
-
-const (
-	cmdDataTypeDiskoiPath specialArgType = iota
-)
-
 type MetaArgument struct {
 	path []string
 }

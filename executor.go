@@ -23,8 +23,6 @@ type Executor struct {
 	cmdStruct reflect.Type
 	//cmdArg is a slice command arguments from the struct, used for generating ApplicationCommandOptions
 	cmdArg []*commandArgument
-	//cmdSpecialArg holds slice of special meta arguments
-	cmdSpecialArg []*specialArgument
 	//a chain of middlewares
 	chain Chain
 }
@@ -36,11 +34,11 @@ func NewExecutor(name string, description string, fn interface{}) (*Executor, er
 		name:        name,
 		description: description,
 	}
-	fnArgs, cmdStruct, cmdArg, specArg, err := analyzeCmdFn(fn)
+	fnArgs, cmdStruct, cmdArg, err := analyzeCmdFn(fn)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse command "%s": %w`, name, err)
 	}
-	e.fn, e.fnArg, e.cmdStruct, e.cmdArg, e.cmdSpecialArg = fn, fnArgs, cmdStruct, cmdArg, specArg
+	e.fn, e.fnArg, e.cmdStruct, e.cmdArg = fn, fnArgs, cmdStruct, cmdArg
 	return &e, nil
 }
 
@@ -62,13 +60,12 @@ func (e *Executor) Description() string {
 
 func (e *Executor) As(name string, description string) *Executor {
 	return &Executor{
-		name:          name,
-		description:   description,
-		fn:            e.fn,
-		fnArg:         e.fnArg,
-		cmdStruct:     e.cmdStruct,
-		cmdArg:        e.cmdArg,
-		cmdSpecialArg: e.cmdSpecialArg,
+		name:        name,
+		description: description,
+		fn:          e.fn,
+		fnArg:       e.fnArg,
+		cmdStruct:   e.cmdStruct,
+		cmdArg:      e.cmdArg,
 	}
 }
 
@@ -108,7 +105,7 @@ func (e *Executor) execute(
 	opts []*discordgo.ApplicationCommandInteractionDataOption,
 	meta *MetaArgument,
 ) error {
-	values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, e.cmdSpecialArg, meta, context.Background(), s, i, opts)
+	values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, meta, context.Background(), s, i, opts)
 	if err != nil {
 		return fmt.Errorf(`error reconstructing command "%s": %w`, e.name, err)
 	}
@@ -119,7 +116,7 @@ func (e *Executor) execute(
 
 func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption, meta *MetaArgument) ([]*discordgo.ApplicationCommandOptionChoice, error) {
-	arg, values, err := reconstructAutocompleteArgs(e.cmdArg, e.cmdSpecialArg, meta, s, i, opts)
+	arg, values, err := reconstructAutocompleteArgs(e.cmdArg, meta, s, i, opts)
 	if err != nil {
 		return nil, fmt.Errorf(`error autocompleting command "%s": %w`, e.name, err)
 	}

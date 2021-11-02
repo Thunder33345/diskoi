@@ -7,7 +7,7 @@ import (
 	"reflect"
 )
 
-func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *MetaArgument, ctx context.Context,
+func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, data *MetaArgument, ctx context.Context,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	o []*discordgo.ApplicationCommandInteractionDataOption) ([]reflect.Value, error) {
 	values := make([]reflect.Value, 0, len(fnArg))
@@ -18,7 +18,7 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmd
 		case fnArgumentTypeInteraction:
 			values = append(values, reflect.ValueOf(i))
 		case fnArgumentTypeData:
-			v, err := reconstructCommandArgument(arg.reflectTyp, cmdArg, cmdSpecialArg, s, i, o, data)
+			v, err := reconstructCommandArgument(arg.reflectTyp, cmdArg, s, i, o)
 			if err != nil {
 				return nil, fmt.Errorf(`reconstructing command data "%s": %w`, arg.reflectTyp.String(), err)
 			}
@@ -46,7 +46,7 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, cmd
 	return values, nil
 }
 
-func reconstructAutocompleteArgs(cmdArg []*commandArgument, cmdSpecialArg []*specialArgument, data *MetaArgument,
+func reconstructAutocompleteArgs(cmdArg []*commandArgument, data *MetaArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption) (*commandArgument, []reflect.Value, error) {
 	find := func(name string) *commandArgument {
@@ -70,7 +70,7 @@ func reconstructAutocompleteArgs(cmdArg []*commandArgument, cmdSpecialArg []*spe
 				arg.fieldName, arg.cType, opt.Type))
 		}
 
-		values, err := reconstructFunctionArgs(arg.autocompleteArgs, cmdArg, cmdSpecialArg, data, context.Background(), s, i, opts)
+		values, err := reconstructFunctionArgs(arg.autocompleteArgs, cmdArg, data, context.Background(), s, i, opts)
 		if err != nil {
 			return nil, nil, fmt.Errorf("reconstructing autocomplete: %w", err)
 		}
@@ -79,9 +79,9 @@ func reconstructAutocompleteArgs(cmdArg []*commandArgument, cmdSpecialArg []*spe
 	return nil, nil, newDiscordExpectationError(fmt.Sprintf("no options in focus"))
 }
 
-func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*commandArgument, cmdSpecialArg []*specialArgument,
+func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*commandArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
-	opts []*discordgo.ApplicationCommandInteractionDataOption, data *MetaArgument) (reflect.Value, error) {
+	opts []*discordgo.ApplicationCommandInteractionDataOption) (reflect.Value, error) {
 	val := reflect.New(cmdStruct).Elem()
 	for _, opt := range opts {
 		py := findPyArg(cmdArg, opt.Name)
@@ -143,16 +143,6 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*commandArgumen
 			}
 		}
 		fVal.Set(recVal)
-	}
-
-	for _, arg := range cmdSpecialArg {
-		fVal := val.FieldByIndex(arg.fieldIndex)
-		switch arg.dataType {
-		case cmdDataTypeDiskoiPath:
-			fVal.Set(reflect.ValueOf(data.path))
-		default:
-			return reflect.Value{}, fmt.Errorf("unrecognized specialArgType %v in %s", arg.dataType, arg.fieldName)
-		}
 	}
 	return val, nil
 }

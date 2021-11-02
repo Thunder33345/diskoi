@@ -15,8 +15,8 @@ var (
 	rTypeInteractCreate = reflect.TypeOf((*discordgo.InteractionCreate)(nil))
 	rTypeCommandOptions = reflect.TypeOf([]*discordgo.ApplicationCommandOptionChoice(nil))
 	rTypeMeta           = reflect.TypeOf((*MetaArgument)(nil))
-	rTypeContext        = reflect.TypeOf(context.Context(nil))
 
+	rTypeIContext        = reflect.TypeOf((*context.Context)(nil)).Elem()
 	rTypeIUnmarshal      = reflect.TypeOf((*Unmarshal)(nil)).Elem()
 	rTypeIChannelType    = reflect.TypeOf((*ChannelType)(nil)).Elem()
 	rTypeICommandOptions = reflect.TypeOf((*CommandOptions)(nil)).Elem()
@@ -27,32 +27,30 @@ const applicationCommandOptionDouble = 10 //type doubles fixme get constant from
 //analyzeCmdFn analyzes a given function, insure it matches expected function signatures for an execution function
 //and calls analyzeFunctionArgument to analyze the function arguments
 //finally it loops thru arguments to find if a function have a command data struct, if so analyzes it to get the args
-//todo remove diskoi:"special:path" in favor of receiving MetaArgument or Request
-func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*commandArgument, []*specialArgument, error) {
+func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*commandArgument, error) {
 	typ := reflect.TypeOf(fn)
 	if typ.Kind() != reflect.Func {
-		return nil, nil, nil, nil, fmt.Errorf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String())
+		return nil, nil, nil, fmt.Errorf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String())
 	}
 	if typ.NumOut() != 0 {
-		return nil, nil, nil, nil, fmt.Errorf("given function(%s) has %d outputs, expecting 0", signature(fn), typ.NumOut())
+		return nil, nil, nil, fmt.Errorf("given function(%s) has %d outputs, expecting 0", signature(fn), typ.NumOut())
 	}
 	fnArgs, err := analyzeFunctionArgument(reflect.TypeOf(fn), nil)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("analyzing function: %w", err)
+		return nil, nil, nil, fmt.Errorf("analyzing function: %w", err)
 	}
 	var cmdStruct reflect.Type
 	var cmdArg []*commandArgument
-	var specialArg []*specialArgument
 	if len(fnArgs) >= 1 {
 		if arg := fnArgs[len(fnArgs)-1]; arg.typ == fnArgumentTypeData {
 			cmdStruct = arg.reflectTyp
-			cmdArg, specialArg, err = analyzeCommandStruct(arg.reflectTyp, []int{})
+			cmdArg, err = analyzeCommandStruct(arg.reflectTyp, []int{})
 			if err != nil {
-				return nil, nil, nil, nil, fmt.Errorf(`analyzing command data(%s): %w`, arg.reflectTyp.String(), err)
+				return nil, nil, nil, fmt.Errorf(`analyzing command data(%s): %w`, arg.reflectTyp.String(), err)
 			}
 		}
 	}
-	return fnArgs, cmdStruct, cmdArg, specialArg, nil
+	return fnArgs, cmdStruct, cmdArg, nil
 }
 
 //analyzeCmdFn analyzes a given function, insure it matches expected function signatures for an autocomplete function
@@ -98,7 +96,7 @@ func analyzeFunctionArgument(typ reflect.Type, expected reflect.Type) ([]*fnArgu
 			fna.typ = fnArgumentTypeInteraction
 		case at == rTypeMeta:
 			fna.typ = fnArgumentTypeMeta
-		case at == rTypeContext:
+		case at.Implements(rTypeIContext):
 			fna.typ = fnArgumentTypeContext
 		case atp.Implements(rTypeIUnmarshal):
 			if at.Kind() == reflect.Ptr {
@@ -136,43 +134,36 @@ func analyzeFunctionArgument(typ reflect.Type, expected reflect.Type) ([]*fnArgu
 //and return the total of all encountered commandArgument and specialArgument in one slice
 //the typ is a "reflect.typeof" command struct
 //the second pre []int is the prefix of current depth, which should be nothing when calling it, and only used internally
-func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*commandArgument, []*specialArgument, error) {
+func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*commandArgument, error) {
 	cmdArgs := make([]*commandArgument, 0, typ.NumField())
-	spcArgs := make([]*specialArgument, 0, 1)
 	for i := 0; i < typ.NumField(); i++ {
 		f := typ.Field(i)
 		pos := append(append(make([]int, 0, len(pre)+1), pre...), i)
 		if !f.IsExported() {
-			return nil, nil, fmt.Errorf(`unsupported unexported field in "%s.%s"`, typ.String(), f.Name)
+			return nil, fmt.Errorf(`unsupported unexported field in "%s.%s"`, typ.String(), f.Name)
 		}
 		if f.Anonymous {
 			if f.Type.Kind() == reflect.Ptr {
-				return nil, nil, fmt.Errorf(`unsupported anonymous field with pointer in "%s.%s"`, typ.String(), f.Name)
+				return nil, fmt.Errorf(`unsupported anonymous field with pointer in "%s.%s"`, typ.String(), f.Name)
 			}
-			a, s, err := analyzeCommandStruct(f.Type, pos)
+			a, err := analyzeCommandStruct(f.Type, pos)
 			if err != nil {
-				return nil, nil, fmt.Errorf(`in "%s": %w`, typ.String(), err)
+				return nil, fmt.Errorf(`in "%s": %w`, typ.String(), err)
 			}
 			cmdArgs = append(cmdArgs, a...)
-			spcArgs = append(spcArgs, s...)
 			continue
 		}
 
-		py, pys, err := analyzeCommandArgumentField(f)
+		py, err := analyzeCommandArgumentField(f)
 		if err != nil {
-			return nil, nil, fmt.Errorf(`analyzing field "%s.%s": %w`, typ.String(), f.Name, err)
+			return nil, fmt.Errorf(`analyzing field "%s.%s": %w`, typ.String(), f.Name, err)
 		}
 		if py != nil {
 			py.fieldIndex = pos
 			cmdArgs = append(cmdArgs, py)
 		}
-		if pys != nil {
-			pys.fieldIndex = pos
-			spcArgs = append(spcArgs, pys)
-		}
-
 	}
-	return cmdArgs, spcArgs, nil
+	return cmdArgs, nil
 }
 
 const magicTag = "diskoi"
@@ -180,7 +171,7 @@ const magicTag = "diskoi"
 //analyzeCommandArgumentField analyze a "reflect.StructField"
 //and returns either commandArgument or specialArgument for said field
 //this is iteratively called by analyzeCommandStruct for each field discovered inside the command struct
-func analyzeCommandArgumentField(f reflect.StructField) (*commandArgument, *specialArgument, error) {
+func analyzeCommandArgumentField(f reflect.StructField) (*commandArgument, error) {
 	tag, ok := f.Tag.Lookup(magicTag)
 
 	arg := &commandArgument{
@@ -196,7 +187,7 @@ func analyzeCommandArgumentField(f reflect.StructField) (*commandArgument, *spec
 
 		allEntries, err := r.ReadAll()
 		if err != nil {
-			return nil, nil, fmt.Errorf(`parsing tag: %s`, err.Error())
+			return nil, fmt.Errorf(`parsing tag: %s`, err.Error())
 		}
 		for _, subEntry := range allEntries {
 			for _, ent := range subEntry {
@@ -212,27 +203,12 @@ func analyzeCommandArgumentField(f reflect.StructField) (*commandArgument, *spec
 					} else {
 						b, err := strconv.ParseBool(value)
 						if err != nil {
-							return nil, nil, fmt.Errorf(`converting "%s" into bool: %w`, value, err)
+							return nil, fmt.Errorf(`converting "%s" into bool: %w`, value, err)
 						}
 						arg.Required = b
 					}
-				case "special":
-					sp := &specialArgument{
-						fieldName: f.Name,
-					}
-					switch value {
-					case "path":
-						sp.dataType = cmdDataTypeDiskoiPath
-
-						if f.Type.Kind() != reflect.Slice || f.Type.Elem().Kind() != reflect.String {
-							return nil, nil, fmt.Errorf(`invalid reciever type "%s" on special:path tag expecting []string`, f.Type.String())
-						}
-					default:
-						return nil, nil, fmt.Errorf("unrecognized special tag with value \"%s\"", value)
-					}
-					return nil, sp, nil
 				default:
-					return nil, nil, fmt.Errorf("unrecognized tag \"%s\" with value \"%s\"", key, value)
+					return nil, fmt.Errorf("unrecognized tag \"%s\" with value \"%s\"", key, value)
 				}
 			}
 		}
@@ -275,13 +251,13 @@ func analyzeCommandArgumentField(f reflect.StructField) (*commandArgument, *spec
 			arg.cType = discordgo.ApplicationCommandOptionMentionable
 		default:
 			if len(arg.ChannelTypes) == 0 || len(arg.Choices) == 0 {
-				return nil, nil, fmt.Errorf(`unrecognized struct "%s"`, f.Type.String())
+				return nil, fmt.Errorf(`unrecognized struct "%s"`, f.Type.String())
 			}
 		}
 	default:
-		return nil, nil, fmt.Errorf(`unsupported kind "%s"`, f.Type.String())
+		return nil, fmt.Errorf(`unsupported kind "%s"`, f.Type.String())
 	}
-	return arg, nil, nil
+	return arg, nil
 }
 
 func splitTxt(str string) (string, string) {
