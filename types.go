@@ -16,6 +16,7 @@ type Command interface {
 		err error,
 	)
 	applicationCommand() *discordgo.ApplicationCommand
+	lock()
 }
 
 //Mentionable is an instance of something that could be a Role or a User
@@ -40,11 +41,5 @@ type rawInteractionHandler func(*discordgo.Session, *discordgo.InteractionCreate
 func withRWMutex(m *sync.RWMutex, fn func()) {
 	m.RLock()
 	defer m.RUnlock()
-	fn()
-}
-
-func withMutex(m *sync.Mutex, fn func()) {
-	m.Lock()
-	defer m.Unlock()
 	fn()
 }

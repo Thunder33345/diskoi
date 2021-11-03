@@ -5,7 +5,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"golang.org/x/net/context"
 	"reflect"
-	"sync"
 )
 
 //Executor stores the function, the type and parsed information
@@ -13,7 +12,7 @@ type Executor struct {
 	name        string
 	description string
 	chain       Chain
-	m           sync.Mutex
+	locked      bool
 
 	//fn is the callback function
 	fn interface{}
@@ -56,8 +55,6 @@ func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
 	[]string,
 	error,
 ) {
-	e.m.Lock()
-	defer e.m.Unlock()
 	return e, Chain{}, d.Options, []string{e.name}, nil
 }
 
@@ -85,23 +82,15 @@ func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCr
 }
 
 func (e *Executor) applicationCommand() *discordgo.ApplicationCommand {
-	e.m.Lock()
-	defer e.m.Unlock()
 	return &discordgo.ApplicationCommand{
 		Type:        discordgo.ChatApplicationCommand,
 		Name:        e.name,
 		Description: e.description,
-		Options:     e.applicationCommandOptionsUnsafe(),
+		Options:     e.applicationCommandOptions(),
 	}
 }
 
 func (e *Executor) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
-	e.m.Lock()
-	defer e.m.Unlock()
-	return e.applicationCommandOptionsUnsafe()
-}
-
-func (e *Executor) applicationCommandOptionsUnsafe() []*discordgo.ApplicationCommandOption {
 	o := make([]*discordgo.ApplicationCommandOption, 0, len(e.cmdArg))
 	for _, b := range e.cmdArg {
 		o = append(o, &discordgo.ApplicationCommandOption{
@@ -117,6 +106,10 @@ func (e *Executor) applicationCommandOptionsUnsafe() []*discordgo.ApplicationCom
 	return o
 }
 
+func (e *Executor) lock() {
+	e.locked = true
+}
+
 func (e *Executor) Name() string {
 	return e.name
 }
@@ -126,9 +119,11 @@ func (e *Executor) Description() string {
 }
 
 func (e *Executor) Chain() Chain {
-	e.m.Lock()
-	defer e.m.Unlock()
 	return e.chain
+}
+
+func (e *Executor) Locked() bool {
+	return e.locked
 }
 
 func (e *Executor) As(name string, description string) *Executor {
@@ -142,17 +137,26 @@ func (e *Executor) As(name string, description string) *Executor {
 		chain:       e.chain,
 	}
 }
-
-func (e *Executor) SetChain(chain Chain) *Executor {
-	e.m.Lock()
-	defer e.m.Unlock()
-	e.chain = chain
+func (e *Executor) MustSetChain(chain Chain) *Executor {
+	err := e.SetChain(chain)
+	if err != nil {
+		panic(fmt.Errorf("error setting name: %w", err))
+	}
 	return e
 }
 
+func (e *Executor) SetChain(chain Chain) error {
+	if e.locked {
+		return e.lockedError()
+	}
+	e.chain = chain
+	return nil
+}
+
 func (e *Executor) SetName(fieldName string, name string) error {
-	e.m.Lock()
-	defer e.m.Unlock()
+	if e.locked {
+		return e.lockedError()
+	}
 	arg, err := e.findField(fieldName)
 	if err != nil {
 		return err
@@ -170,8 +174,9 @@ func (e *Executor) MustSetName(fieldName string, name string) *Executor {
 }
 
 func (e *Executor) SetDescription(fieldName string, desc string) error {
-	e.m.Lock()
-	defer e.m.Unlock()
+	if e.locked {
+		return e.lockedError()
+	}
 	arg, err := e.findField(fieldName)
 	if err != nil {
 		return err
@@ -189,8 +194,9 @@ func (e *Executor) MustSetDescription(fieldName string, desc string) *Executor {
 }
 
 func (e *Executor) SetRequired(fieldName string, required bool) error {
-	e.m.Lock()
-	defer e.m.Unlock()
+	if e.locked {
+		return e.lockedError()
+	}
 	arg, err := e.findField(fieldName)
 	if err != nil {
 		return err
@@ -208,8 +214,9 @@ func (e *Executor) MustSetRequired(fieldName string, required bool) *Executor {
 }
 
 func (e *Executor) SetChoices(fieldName string, choices []*discordgo.ApplicationCommandOptionChoice) error {
-	e.m.Lock()
-	defer e.m.Unlock()
+	if e.locked {
+		return e.lockedError()
+	}
 	arg, err := e.findField(fieldName)
 	if err != nil {
 		return err
@@ -227,8 +234,9 @@ func (e *Executor) MustSetChoices(fieldName string, choices []*discordgo.Applica
 }
 
 func (e *Executor) SetChannelTypes(fieldName string, ChannelTypes []discordgo.ChannelType) error {
-	e.m.Lock()
-	defer e.m.Unlock()
+	if e.locked {
+		return e.lockedError()
+	}
 	arg, err := e.findField(fieldName)
 	if err != nil {
 		return err
@@ -246,8 +254,9 @@ func (e *Executor) MustSetChannelTypes(fieldName string, ChannelTypes []discordg
 }
 
 func (e *Executor) SetAutoComplete(fieldName string, fn interface{}) error {
-	e.m.Lock()
-	defer e.m.Unlock()
+	if e.locked {
+		return e.lockedError()
+	}
 	arg, err := e.findField(fieldName)
 	if err != nil {
 		return err
@@ -276,4 +285,8 @@ func (e *Executor) findField(name string) (*commandArgument, error) {
 		}
 	}
 	return nil, fmt.Errorf(`cant find field named "%s" in command "%s"`, name, e.name)
+}
+
+func (e *Executor) lockedError() error {
+	return fmt.Errorf(`setting value to executor "%s": cant set value to a locked executor`, e.name)
 }

@@ -145,3 +145,12 @@ func (c *CommandGroup) findGroup(name string) (*SubcommandGroup, int) {
 	}
 	return nil, -1
 }
+
+func (c *CommandGroup) lock() {
+	c.m.RLock()
+	defer c.m.RUnlock()
+	c.SubcommandGroup.lock()
+	for _, grp := range c.subcommandGroups {
+		grp.lock()
+	}
+}

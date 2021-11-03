@@ -116,10 +116,12 @@ func (d *Diskoi) AddCommand(cmd Command) {
 func (d *Diskoi) AddGuildCommand(guild string, cmd Command) {
 	d.m.Lock()
 	defer d.m.Unlock()
+	cmd.lock()
+
 	dupe, i := d.findGuildCommandByName(guild, cmd.Name())
 	if dupe != nil {
 		c, id := d.findRegisteredCmd(dupe)
-		if c != nil {
+		if c != nil { //todo remove implicit registration
 			_ = d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, id)
 		}
 

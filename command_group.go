@@ -47,7 +47,6 @@ func (c *SubcommandGroup) applicationCommandOption() *discordgo.ApplicationComma
 func (c *SubcommandGroup) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
 	c.m.RLock()
 	defer c.m.RUnlock()
-	defer c.applicationCommandOptionsUnsafe()
 	return c.applicationCommandOptionsUnsafe()
 }
 
@@ -102,4 +101,12 @@ func (c *SubcommandGroup) findSub(name string) (*Executor, int) {
 		}
 	}
 	return nil, -1
+}
+
+func (c *SubcommandGroup) lock() {
+	c.m.Lock()
+	defer c.m.Unlock()
+	for _, exec := range c.h {
+		exec.lock()
+	}
 }
