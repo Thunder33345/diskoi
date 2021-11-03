@@ -82,7 +82,11 @@ func reconstructAutocompleteArgs(cmdArg []*commandArgument, data *MetaArgument,
 func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*commandArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption) (reflect.Value, error) {
-	val := reflect.New(cmdStruct).Elem()
+	val := reflect.New(cmdStruct)
+	if cmdStruct.Kind() != reflect.Ptr {
+		val = val.Elem()
+	}
+
 	for _, opt := range opts {
 		py := findPyArg(cmdArg, opt.Name)
 		if py == nil {

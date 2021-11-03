@@ -134,6 +134,7 @@ func analyzeFunctionArgument(typ reflect.Type, expected reflect.Type) ([]*fnArgu
 //and return the total of all encountered commandArgument and specialArgument in one slice
 //the typ is a "reflect.typeof" command struct
 //the second pre []int is the prefix of current depth, which should be nothing when calling it, and only used internally
+//causes reflect panic if kind is not struct
 func analyzeCommandStruct(typ reflect.Type, pre []int) ([]*commandArgument, error) {
 	cmdArgs := make([]*commandArgument, 0, typ.NumField())
 	for i := 0; i < typ.NumField(); i++ {
