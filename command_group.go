@@ -33,23 +33,6 @@ func (c *SubcommandGroup) Chain() Chain {
 	return c.chain
 }
 
-func (c *SubcommandGroup) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
-	c.m.RLock()
-	defer c.m.RUnlock()
-	o := make([]*discordgo.ApplicationCommandOption, 0, len(c.h))
-	for _, e := range c.h {
-		e.m.Lock()
-		o = append(o, &discordgo.ApplicationCommandOption{
-			Type:        discordgo.ApplicationCommandOptionSubCommand,
-			Name:        e.name,
-			Description: e.description,
-			Options:     e.applicationCommandOptions(),
-		})
-		e.m.Unlock()
-	}
-	return o
-}
-
 func (c *SubcommandGroup) applicationCommandOption() *discordgo.ApplicationCommandOption {
 	c.m.RLock()
 	defer c.m.RUnlock()
@@ -57,8 +40,28 @@ func (c *SubcommandGroup) applicationCommandOption() *discordgo.ApplicationComma
 		Type:        discordgo.ApplicationCommandOptionSubCommandGroup,
 		Name:        c.name,
 		Description: c.description,
-		Options:     c.applicationCommandOptions(),
+		Options:     c.applicationCommandOptionsUnsafe(),
 	}
+}
+
+func (c *SubcommandGroup) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
+	c.m.RLock()
+	defer c.m.RUnlock()
+	defer c.applicationCommandOptionsUnsafe()
+	return c.applicationCommandOptionsUnsafe()
+}
+
+func (c *SubcommandGroup) applicationCommandOptionsUnsafe() []*discordgo.ApplicationCommandOption {
+	o := make([]*discordgo.ApplicationCommandOption, 0, len(c.h))
+	for _, e := range c.h {
+		o = append(o, &discordgo.ApplicationCommandOption{
+			Type:        discordgo.ApplicationCommandOptionSubCommand,
+			Name:        e.name,
+			Description: e.description,
+			Options:     e.applicationCommandOptions(),
+		})
+	}
+	return o
 }
 
 func (c *SubcommandGroup) FindSubcommand(name string) (*Executor, bool) {

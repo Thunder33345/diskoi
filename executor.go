@@ -89,16 +89,17 @@ func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
 	[]string,
 	error,
 ) {
+	e.m.Lock()
+	defer e.m.Unlock()
 	return e, e.chain, d.Options, []string{e.name}, nil
 }
 
-func (e *Executor) middleware() Middleware {
+func (e *Executor) middleware() Middleware { //todo cleanup this mess
 	return func(r Request) error {
 		return e.execute(r.ses, r.ic, r.opts, r.meta)
 	}
 }
 
-//todo remove
 func (e *Executor) execute(
 	s *discordgo.Session,
 	i *discordgo.InteractionCreate,
@@ -132,11 +133,17 @@ func (e *Executor) applicationCommand() *discordgo.ApplicationCommand {
 		Type:        discordgo.ChatApplicationCommand,
 		Name:        e.name,
 		Description: e.description,
-		Options:     e.applicationCommandOptions(),
+		Options:     e.applicationCommandOptionsUnsafe(),
 	}
 }
 
 func (e *Executor) applicationCommandOptions() []*discordgo.ApplicationCommandOption {
+	e.m.Lock()
+	defer e.m.Unlock()
+	return e.applicationCommandOptionsUnsafe()
+}
+
+func (e *Executor) applicationCommandOptionsUnsafe() []*discordgo.ApplicationCommandOption {
 	o := make([]*discordgo.ApplicationCommandOption, 0, len(e.cmdArg))
 	for _, b := range e.cmdArg {
 		o = append(o, &discordgo.ApplicationCommandOption{

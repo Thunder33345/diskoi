@@ -7,7 +7,7 @@ import (
 type Command interface {
 	Name() string
 	Description() string
-	executor(d discordgo.ApplicationCommandInteractionData) (
+	executor(d discordgo.ApplicationCommandInteractionData) ( //todo remove chain
 		executor *Executor,
 		chain Chain,
 		options []*discordgo.ApplicationCommandInteractionDataOption,
