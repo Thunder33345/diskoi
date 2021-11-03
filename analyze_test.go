@@ -63,6 +63,48 @@ func TestAnalyzeCmdFn(t *testing.T) {
 				},
 			},
 		}, {
+			name: "process ptr",
+			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h interaction.Interaction, et *EmbeddableTest) {
+			},
+			wantType: reflect.TypeOf(EmbeddableTest{}),
+			wantFnArgs: []fnArgument{{typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction},
+				{
+					typ:        fnArgumentTypeMarshal,
+					reflectTyp: reflect.TypeOf(interaction.Interaction{}),
+				},
+				{
+					typ:        fnArgumentTypeData,
+					reflectTyp: reflect.TypeOf(EmbeddableTest{}),
+				},
+			},
+			wantArgs: []commandArgument{
+				{
+					fieldIndex: []int{0},
+					fieldName:  "Test",
+					cType:      discordgo.ApplicationCommandOptionString,
+				}, {
+					fieldIndex: []int{1},
+					fieldName:  "Test2",
+					cType:      discordgo.ApplicationCommandOptionInteger,
+				}, {
+					fieldIndex: []int{2, 0},
+					fieldName:  "FooChannel",
+					cType:      discordgo.ApplicationCommandOptionChannel,
+				}, {
+					fieldIndex: []int{2, 1},
+					fieldName:  "BarUser",
+					cType:      discordgo.ApplicationCommandOptionUser,
+				}, {
+					fieldIndex: []int{2, 2, 0},
+					fieldName:  "FarRole",
+					cType:      discordgo.ApplicationCommandOptionRole,
+				}, {
+					fieldIndex: []int{2, 2, 1},
+					fieldName:  "RafInt",
+					cType:      discordgo.ApplicationCommandOptionInteger,
+				},
+			},
+		}, {
 			name:    "err non func",
 			fn:      "foo",
 			wantErr: regexp.MustCompile("^given type .*?\\) is not type of func"),
@@ -296,6 +338,7 @@ func TestAnalyzeCommandStruct(t *testing.T) {
 
 		wantCmdArg []commandArgument
 		errRegex   *regexp.Regexp
+		wantPanic  bool
 	}{
 		{
 			name: "general test",
@@ -345,12 +388,26 @@ func TestAnalyzeCommandStruct(t *testing.T) {
 				EmbeddableFail
 			}{}),
 			errRegex: regexp.MustCompile(`^in ".*?": analyzing field "diskoi.EmbeddableFail.FooComplex": unsupported kind "complex64"`),
+		}, {
+			name:      "panic invalid int",
+			typ:       reflect.TypeOf(1),
+			wantPanic: true,
+		}, {
+			name:      "panic invalid ptr struct",
+			typ:       reflect.TypeOf(&EmbeddableTest{}),
+			wantPanic: true,
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := require.New(t)
-			cmd, err := analyzeCommandStruct(tc.typ, []int{})
+			if tc.wantPanic {
+				r.Panics(func() {
+					_, _ = analyzeCommandStruct(tc.typ, nil)
+				})
+				return
+			}
+			cmd, err := analyzeCommandStruct(tc.typ, nil)
 			if tc.errRegex != nil {
 				r.Regexp(tc.errRegex, err)
 			} else {
