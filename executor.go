@@ -12,6 +12,7 @@ import (
 type Executor struct {
 	name        string
 	description string
+	chain       Chain
 	m           sync.Mutex
 
 	//fn is the callback function
@@ -23,8 +24,6 @@ type Executor struct {
 	cmdStruct reflect.Type
 	//cmdArg is a slice command arguments from the struct, used for generating ApplicationCommandOptions
 	cmdArg []*commandArgument
-	//a chain of middlewares
-	chain Chain
 }
 
 var _ Command = (*Executor)(nil)
@@ -48,38 +47,6 @@ func MustNewExecutor(name string, description string, fn interface{}) *Executor 
 		panic(fmt.Errorf("error creating executor named %s: %w", name, err))
 	}
 	return executor
-}
-
-func (e *Executor) Name() string {
-	return e.name
-}
-
-func (e *Executor) Description() string {
-	return e.description
-}
-
-func (e *Executor) As(name string, description string) *Executor {
-	return &Executor{
-		name:        name,
-		description: description,
-		fn:          e.fn,
-		fnArg:       e.fnArg,
-		cmdStruct:   e.cmdStruct,
-		cmdArg:      e.cmdArg,
-	}
-}
-
-func (e *Executor) SetChain(chain Chain) *Executor {
-	e.m.Lock()
-	defer e.m.Unlock()
-	e.chain = chain
-	return e
-}
-
-func (e *Executor) Chain() Chain {
-	e.m.Lock()
-	defer e.m.Unlock()
-	return e.chain
 }
 
 func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
@@ -150,13 +117,37 @@ func (e *Executor) applicationCommandOptionsUnsafe() []*discordgo.ApplicationCom
 	return o
 }
 
-func (e *Executor) findField(name string) (*commandArgument, error) {
-	for _, arg := range e.cmdArg {
-		if arg.fieldName == name {
-			return arg, nil
-		}
+func (e *Executor) Name() string {
+	return e.name
+}
+
+func (e *Executor) Description() string {
+	return e.description
+}
+
+func (e *Executor) Chain() Chain {
+	e.m.Lock()
+	defer e.m.Unlock()
+	return e.chain
+}
+
+func (e *Executor) As(name string, description string) *Executor {
+	return &Executor{
+		name:        name,
+		description: description,
+		fn:          e.fn,
+		fnArg:       e.fnArg,
+		cmdStruct:   e.cmdStruct,
+		cmdArg:      e.cmdArg,
+		chain:       e.chain,
 	}
-	return nil, fmt.Errorf(`cant find field named "%s" in command "%s"`, name, e.name)
+}
+
+func (e *Executor) SetChain(chain Chain) *Executor {
+	e.m.Lock()
+	defer e.m.Unlock()
+	e.chain = chain
+	return e
 }
 
 func (e *Executor) SetName(fieldName string, name string) error {
@@ -276,4 +267,13 @@ func (e *Executor) MustSetAutoComplete(fieldName string, fn interface{}) *Execut
 		panic(fmt.Errorf("error setting autocomplete: %w", err))
 	}
 	return e
+}
+
+func (e *Executor) findField(name string) (*commandArgument, error) {
+	for _, arg := range e.cmdArg {
+		if arg.fieldName == name {
+			return arg, nil
+		}
+	}
+	return nil, fmt.Errorf(`cant find field named "%s" in command "%s"`, name, e.name)
 }
