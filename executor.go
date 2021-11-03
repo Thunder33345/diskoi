@@ -91,28 +91,19 @@ func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
 ) {
 	e.m.Lock()
 	defer e.m.Unlock()
-	return e, e.chain, d.Options, []string{e.name}, nil
+	return e, Chain{}, d.Options, []string{e.name}, nil
 }
 
-func (e *Executor) middleware() Middleware { //todo cleanup this mess
-	return func(r Request) error {
-		return e.execute(r.ses, r.ic, r.opts, r.meta)
-	}
-}
-
-func (e *Executor) execute(
-	s *discordgo.Session,
-	i *discordgo.InteractionCreate,
-	opts []*discordgo.ApplicationCommandInteractionDataOption,
-	meta *MetaArgument,
-) error {
-	values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, meta, context.Background(), s, i, opts)
-	if err != nil {
-		return fmt.Errorf(`error reconstructing command "%s": %w`, e.name, err)
-	}
-	fn := reflect.ValueOf(e.fn)
-	fn.Call(values)
-	return nil
+func (e *Executor) executeMiddleware(request Request, chain Chain) error {
+	return chain.Extend(e.Chain()).Then(func(r Request) error {
+		values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, r.meta, context.Background(), r.ses, r.ic, r.opts)
+		if err != nil {
+			return fmt.Errorf(`error reconstructing command "%s": %w`, e.name, err)
+		}
+		fn := reflect.ValueOf(e.fn)
+		fn.Call(values)
+		return nil
+	})(request)
 }
 
 func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,

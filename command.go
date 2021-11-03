@@ -70,9 +70,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 			return nil, Chain{}, nil, nil, fmt.Errorf(`missing subcommand group: group "%s" not found on %s`, target.Name, errPath(path))
 		}
 		//if so we unwrap options to get the actual name
-		withMutex(&group.m, func() {
-			chain = chain.Extend(group.chain)
-		})
+		chain = chain.Extend(group.Chain())
 		target = target.Options[0]
 	default:
 		return nil, Chain{}, nil, nil, newDiscordExpectationError(fmt.Sprintf(
@@ -81,7 +79,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	}
 
 	var sub *Executor
-	withMutex(&group.m, func() {
+	withRWMutex(&group.m, func() {
 		sub, _ = group.findSub(target.Name)
 	})
 	path = append(path, target.Name)
@@ -91,11 +89,6 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	return nil, Chain{}, nil, nil, fmt.Errorf(`missing subcommand: subcommand "%s" not found on %s`, target.Name, errPath(path))
 }
 
-func withMutex(m *sync.RWMutex, f func()) {
-	m.RLock()
-	defer m.RUnlock()
-	f()
-}
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand {
 	c.m.RLock()
 	defer c.m.RUnlock()

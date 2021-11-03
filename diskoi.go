@@ -55,14 +55,15 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
 			return
 		}
-		err = d.Chain().Extend(chain).Then(executor.middleware())(Request{
+		r := Request{
 			ctx:  context.Background(),
 			ses:  s,
 			ic:   i,
 			opts: options,
 			meta: &MetaArgument{path: path},
 			exec: executor,
-		})
+		}
+		err = executor.executeMiddleware(r, d.chain.Extend(chain))
 
 		if err != nil {
 			d.getErrorHandler()(s, i, e, CommandExecutionError{name: executor.name, err: err})
