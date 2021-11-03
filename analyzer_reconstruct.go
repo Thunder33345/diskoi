@@ -49,24 +49,16 @@ func reconstructFunctionArgs(fnArg []*fnArgument, cmdArg []*commandArgument, dat
 func reconstructAutocompleteArgs(cmdArg []*commandArgument, data *MetaArgument,
 	s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption) (*commandArgument, []reflect.Value, error) {
-	find := func(name string) *commandArgument {
-		for _, arg := range cmdArg {
-			if arg.Name == name {
-				return arg
-			}
-		}
-		return nil
-	}
 	for _, opt := range opts {
 		if !opt.Focused {
 			continue
 		}
-		arg := find(opt.Name)
+		arg := findCmdArg(cmdArg, opt.Name)
 		if arg == nil {
-			return nil, nil, fmt.Errorf("missing option %s with type %v", opt.Name, opt.Type)
+			return nil, nil, fmt.Errorf(`cant find option named "%s" type of "%v" locally`, opt.Name, opt.Type)
 		}
 		if arg.cType != opt.Type {
-			return nil, nil, newDiscordExpectationError(fmt.Sprintf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
+			return nil, nil, newDiscordExpectationError(fmt.Sprintf(`option mismatch in %s: we expect it to be "%v", but discord says it is "%v"`,
 				arg.fieldName, arg.cType, opt.Type))
 		}
 
@@ -88,12 +80,12 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*commandArgumen
 	}
 
 	for _, opt := range opts {
-		py := findPyArg(cmdArg, opt.Name)
+		py := findCmdArg(cmdArg, opt.Name)
 		if py == nil {
-			return reflect.Value{}, fmt.Errorf("missing option %s with type %v", opt.Name, opt.Type)
+			return reflect.Value{}, fmt.Errorf(`cant find option named "%s" type of "%v" locally`, opt.Name, opt.Type)
 		}
 		if py.cType != opt.Type {
-			return reflect.Value{}, newDiscordExpectationError(fmt.Sprintf(`option missmatch in %s: we expect it to be "%v", but discord says it is "%v"`,
+			return reflect.Value{}, newDiscordExpectationError(fmt.Sprintf(`option type mismatch in "%s": we expect it to be "%v", but discord says it is "%v"`,
 				py.fieldName, py.cType, opt.Type))
 		}
 		fVal := val.FieldByIndex(py.fieldIndex)
@@ -132,7 +124,7 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*commandArgumen
 			}
 			v = men
 		default:
-			return reflect.Value{}, newDiscordExpectationError(fmt.Sprintf("unrecognized ApplicationCommandOptionType %v in %s", opt.Type, py.fieldName))
+			return reflect.Value{}, newDiscordExpectationError(fmt.Sprintf(`unrecognized ApplicationCommandOptionType "%v" in "%s"`, opt.Type, py.fieldName))
 		}
 		recVal := reflect.ValueOf(v)
 		if fVal.Kind() != reflect.Ptr {
@@ -151,10 +143,10 @@ func reconstructCommandArgument(cmdStruct reflect.Type, cmdArg []*commandArgumen
 	return val, nil
 }
 
-func findPyArg(pys []*commandArgument, name string) *commandArgument {
-	for _, py := range pys {
-		if name == py.Name {
-			return py
+func findCmdArg(cmdArgs []*commandArgument, name string) *commandArgument {
+	for _, arg := range cmdArgs {
+		if name == arg.Name {
+			return arg
 		}
 	}
 	return nil
