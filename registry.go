@@ -120,9 +120,9 @@ func (d *Diskoi) AddGuildCommand(guild string, cmd Command) {
 
 	dupe, i := d.findGuildCommandByName(guild, cmd.Name())
 	if dupe != nil {
-		c, id := d.findRegisteredCmd(dupe)
-		if c != nil { //todo remove implicit registration
-			_ = d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, id)
+		c, id := d.findRegisteredCmdUnsafe(dupe)
+		if c != nil {
+			delete(d.registeredCommand, id)
 		}
 
 		if guild == "" {
@@ -185,6 +185,8 @@ func (d *Diskoi) FindGuildCommandByName(guild string, name string) Command {
 }
 
 func (d *Diskoi) findGuildCommandByName(guild string, name string) (Command, int) {
+	d.m.Lock()
+	defer d.m.Unlock()
 	f := func(c []Command) (Command, int) {
 		for i, cmd := range c {
 			if cmd.Name() == name {
@@ -200,9 +202,7 @@ func (d *Diskoi) findGuildCommandByName(guild string, name string) (Command, int
 	return f(d.commandsGuild[guild])
 }
 
-func (d *Diskoi) findRegisteredCmd(cmd Command) (Command, string) {
-	d.m.Lock()
-	defer d.m.Unlock()
+func (d *Diskoi) findRegisteredCmdUnsafe(cmd Command) (Command, string) {
 	for id, rc := range d.registeredCommand {
 		if cmd == rc {
 			return cmd, id
