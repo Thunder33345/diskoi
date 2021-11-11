@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-func (d *Diskoi) RegisterCommands() error {
+func (d *Diskoi) RegisterCommands() error { //todo allow selective registering between guild or global
 	d.m.Lock()
 	defer d.m.Unlock()
 	s := d.s
@@ -95,12 +95,12 @@ func (d *Diskoi) SyncCommands() error {
 	return nil
 }
 
-func (d *Diskoi) UnregisterCommands() error {
+func (d *Diskoi) UnregisterCommands() error { //todo allow selective unregistering between guild or global
 	d.m.Lock()
 	defer d.m.Unlock()
 	s := d.s
 	for id := range d.registeredCommand {
-		err := s.ApplicationCommandDelete(s.State.User.ID, "735145518220443680", id)
+		err := s.ApplicationCommandDelete(s.State.User.ID, "", id)
 		if err != nil {
 			return DiscordAPIError{err: err}
 		}
