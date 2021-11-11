@@ -175,18 +175,20 @@ func (d *Diskoi) RemoveGuildCommand(guild string, cmd Command) error {
 }
 
 func (d *Diskoi) FindCommandByName(name string) Command {
+	d.m.Lock()
+	defer d.m.Unlock()
 	c, _ := d.findGuildCommandByName("", name)
 	return c
 }
 
 func (d *Diskoi) FindGuildCommandByName(guild string, name string) Command {
+	d.m.Lock()
+	defer d.m.Unlock()
 	c, _ := d.findGuildCommandByName(guild, name)
 	return c
 }
 
 func (d *Diskoi) findGuildCommandByName(guild string, name string) (Command, int) {
-	d.m.Lock()
-	defer d.m.Unlock()
 	f := func(c []Command) (Command, int) {
 		for i, cmd := range c {
 			if cmd.Name() == name {
