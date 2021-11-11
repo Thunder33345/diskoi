@@ -112,9 +112,8 @@ func TestReconstructCommandArgument(t *testing.T) {
 			if tc.wantErr != nil {
 				r.Regexp(tc.wantErr, err)
 				return
-			} else {
-				r.Nil(err)
 			}
+			r.Nil(err)
 
 			if tc.want != reflect.ValueOf(nil) {
 				r.EqualValues(tc.want.Interface(), value.Interface())
