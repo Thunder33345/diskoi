@@ -38,3 +38,8 @@ func withRWMutex(m *sync.RWMutex, fn func()) {
 	defer m.RUnlock()
 	fn()
 }
+
+type registerMapping struct {
+	command Command
+	guild   string
+}

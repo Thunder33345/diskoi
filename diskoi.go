@@ -11,7 +11,7 @@ type Diskoi struct {
 	remover           func()
 	commands          []Command
 	commandsGuild     map[string][]Command
-	registeredCommand map[string]Command
+	registeredCommand map[string]registerMapping
 	m                 sync.Mutex
 	errorHandler      errorHandler
 	rawHandler        rawInteractionHandler
@@ -22,7 +22,7 @@ type Diskoi struct {
 func NewDiskoi() *Diskoi {
 	return &Diskoi{
 		commandsGuild:     map[string][]Command{},
-		registeredCommand: map[string]Command{},
+		registeredCommand: map[string]registerMapping{},
 		m:                 sync.Mutex{},
 		errorHandler:      func(s *discordgo.Session, i *discordgo.InteractionCreate, cmd Command, err error) {},
 		rawHandler:        func(session *discordgo.Session, create *discordgo.InteractionCreate) {},
@@ -98,7 +98,7 @@ func (d *Diskoi) findRegisteredCmdById(id string) Command {
 	d.m.Lock()
 	defer d.m.Unlock()
 	cmd, _ := d.registeredCommand[id]
-	return cmd
+	return cmd.command
 }
 
 func (d *Diskoi) SetErrorHandler(handler errorHandler) {

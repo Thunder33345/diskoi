@@ -14,7 +14,10 @@ func (d *Diskoi) RegisterCommands() error { //todo allow selective registering b
 		if err != nil {
 			return DiscordAPIError{err: err}
 		}
-		d.registeredCommand[cc.ID] = c
+		d.registeredCommand[cc.ID] = registerMapping{
+			command: c,
+			guild:   g,
+		}
 		return nil
 	}
 	for _, cmd := range d.commands {
@@ -59,7 +62,10 @@ func (d *Diskoi) SyncCommands() error {
 				if len(eac.Options) == len(rc.Options) &&
 					eac.Description == rc.Description &&
 					(len(eac.Options) == 0 || reflect.DeepEqual(eac.Options, rc.Options)) {
-					d.registeredCommand[rc.ID] = c
+					d.registeredCommand[rc.ID] = registerMapping{
+						command: c,
+						guild:   guild,
+					}
 					continue
 				}
 			}
@@ -67,7 +73,10 @@ func (d *Diskoi) SyncCommands() error {
 			if err != nil {
 				return DiscordAPIError{err: err}
 			}
-			d.registeredCommand[cc.ID] = c
+			d.registeredCommand[cc.ID] = registerMapping{
+				command: c,
+				guild:   guild,
+			}
 		}
 
 		for cName, cmd := range cMap {
@@ -95,11 +104,28 @@ func (d *Diskoi) SyncCommands() error {
 	return nil
 }
 
-func (d *Diskoi) UnregisterCommands() error { //todo allow selective unregistering between guild or global
+func (d *Diskoi) UnregisterAllCommands() error {
 	d.m.Lock()
 	defer d.m.Unlock()
 	s := d.s
 	for id := range d.registeredCommand {
+		err := s.ApplicationCommandDelete(s.State.User.ID, "", id)
+		if err != nil {
+			return DiscordAPIError{err: err}
+		}
+		delete(d.registeredCommand, id)
+	}
+	return nil
+}
+
+func (d *Diskoi) UnregisterCommands(guild string) error {
+	d.m.Lock()
+	defer d.m.Unlock()
+	s := d.s
+	for id, rCmd := range d.registeredCommand {
+		if rCmd.guild != guild {
+			continue
+		}
 		err := s.ApplicationCommandDelete(s.State.User.ID, "", id)
 		if err != nil {
 			return DiscordAPIError{err: err}
@@ -164,7 +190,7 @@ func (d *Diskoi) RemoveGuildCommand(guild string, cmd Command) error {
 	}
 
 	for id, e2 := range d.registeredCommand {
-		if cmd == e2 {
+		if cmd == e2.command {
 			err := d.s.ApplicationCommandDelete(d.s.State.User.ID, guild, id)
 			if err != nil {
 				return DiscordAPIError{err: err}
@@ -206,7 +232,7 @@ func (d *Diskoi) findGuildCommandByName(guild string, name string) (Command, int
 
 func (d *Diskoi) findRegisteredCmdUnsafe(cmd Command) (Command, string) {
 	for id, rc := range d.registeredCommand {
-		if cmd == rc {
+		if cmd == rc.command {
 			return cmd, id
 		}
 	}
