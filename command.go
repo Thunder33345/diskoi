@@ -46,8 +46,39 @@ func (c *CommandGroup) Chain() Chain {
 	return c.chain
 }
 
-func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
-	*Executor, Chain, []*discordgo.ApplicationCommandInteractionDataOption, []string, error,
+func (c *CommandGroup) execute(s *discordgo.Session, i *discordgo.InteractionCreate, pre Chain) error {
+	id, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
+	if !ok {
+		return newDiscordExpectationError(
+			fmt.Sprintf(`given interaction data is not ApplicationCommandInteractionData in command group "%s"`, c.name))
+	}
+	exec, grpChain, opts, meta, err := c.findExecutor(id)
+	if err != nil {
+		return err
+	}
+	chain := pre.Extend(grpChain)
+	err = exec.executeWithOpts(s, i, chain, opts, meta)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CommandGroup) autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) ([]*discordgo.ApplicationCommandOptionChoice, error) {
+	id, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
+	if !ok {
+		return nil, newDiscordExpectationError(
+			fmt.Sprintf(`given interaction data is not ApplicationCommandInteractionData in command group "%s"`, c.name))
+	}
+	exec, _, opts, meta, err := c.findExecutor(id)
+	if err != nil {
+		return nil, err
+	}
+	return exec.autocompleteWithOps(s, i, opts, meta)
+}
+
+func (c *CommandGroup) findExecutor(d discordgo.ApplicationCommandInteractionData) (
+	*Executor, Chain, []*discordgo.ApplicationCommandInteractionDataOption, *MetaArgument, error,
 ) {
 	c.m.RLock()
 	defer c.m.RUnlock()
@@ -67,7 +98,7 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 		group, _ = c.findGroup(target.Name)
 		path = append(path, target.Name)
 		if group == nil {
-			return nil, Chain{}, nil, nil, fmt.Errorf(`missing subcommand group: group "%s" not found on %s`, target.Name, errPath(path))
+			return nil, Chain{}, nil, nil, CommandParsingError{err: fmt.Errorf(`missing subcommand group: group "%s" not found on %s`, target.Name, errPath(path))}
 		}
 		//if so we unwrap options to get the actual name
 		chain = chain.Extend(group.Chain())
@@ -84,9 +115,9 @@ func (c *CommandGroup) executor(d discordgo.ApplicationCommandInteractionData) (
 	})
 	path = append(path, target.Name)
 	if sub != nil {
-		return sub, chain, target.Options, path, nil
+		return sub, chain, target.Options, &MetaArgument{path: path}, nil
 	}
-	return nil, Chain{}, nil, nil, fmt.Errorf(`missing subcommand: subcommand "%s" not found on %s`, target.Name, errPath(path))
+	return nil, Chain{}, nil, nil, CommandParsingError{err: fmt.Errorf(`missing subcommand: subcommand "%s" not found on %s`, target.Name, errPath(path))}
 }
 
 func (c *CommandGroup) applicationCommand() *discordgo.ApplicationCommand {

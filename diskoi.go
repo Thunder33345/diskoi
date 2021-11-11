@@ -2,13 +2,11 @@ package diskoi
 
 import (
 	"github.com/bwmarrin/discordgo"
-	"golang.org/x/net/context"
 	"sync"
 )
 
 type Diskoi struct {
 	//idea maybe syncHandling option for go execute
-	//todo middlewares for executor command and command group
 	s                 *discordgo.Session
 	remover           func()
 	commands          []Command
@@ -50,23 +48,11 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			d.getRawHandler()(s, i)
 			return
 		}
-		executor, chain, options, path, err := e.executor(id)
-		if err != nil {
-			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
-			return
-		}
-		r := Request{
-			ctx:  context.Background(),
-			ses:  s,
-			ic:   i,
-			opts: options,
-			meta: &MetaArgument{path: path},
-			exec: executor,
-		}
-		err = executor.executeMiddleware(r, d.chain.Extend(chain))
+
+		err := e.execute(s, i, d.chain)
 
 		if err != nil {
-			d.getErrorHandler()(s, i, e, CommandExecutionError{name: executor.name, err: err})
+			d.getErrorHandler()(s, i, e, err)
 		}
 	case i.Type == discordgo.InteractionApplicationCommandAutocomplete &&
 		i.Data.Type() == discordgo.InteractionApplicationCommand:
@@ -79,14 +65,10 @@ func (d *Diskoi) handle(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			d.getRawHandler()(s, i)
 			return
 		}
-		executor, _, options, path, err := e.executor(id)
+		opts, err := e.autocomplete(s, i)
+
 		if err != nil {
-			d.getErrorHandler()(s, i, e, CommandParsingError{err: err})
-			return
-		}
-		opts, err := executor.autocomplete(s, i, options, &MetaArgument{path: path})
-		if err != nil {
-			d.getErrorHandler()(s, i, e, AutocompleteExecutionError{name: executor.name, err: err})
+			d.getErrorHandler()(s, i, e, AutocompleteExecutionError{name: e.Name(), err: err})
 		}
 		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionApplicationCommandAutocompleteResult,

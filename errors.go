@@ -18,7 +18,7 @@ func (e *CommandParsingError) Unwrap() error {
 	return e.err
 }
 
-//CommandExecutionError indicates error is originated from executing command
+//CommandExecutionError indicates error is originated from executing a command function
 type CommandExecutionError struct {
 	name string
 	err  error
@@ -29,6 +29,20 @@ func (e CommandExecutionError) Error() string {
 }
 
 func (e CommandExecutionError) Unwrap() error {
+	return e.err
+}
+
+//CommandMiddlewareExecutionError indicates error is originated from executing a middleware between command function
+type CommandMiddlewareExecutionError struct {
+	name string
+	err  error
+}
+
+func (e CommandMiddlewareExecutionError) Error() string {
+	return fmt.Sprintf(`error executing command middleware for "%s": %v`, e.name, e.err)
+}
+
+func (e CommandMiddlewareExecutionError) Unwrap() error {
 	return e.err
 }
 
@@ -65,7 +79,7 @@ type DiscordExpectationError struct {
 }
 
 func (e DiscordExpectationError) Error() string {
-	return e.err
+	return "discord expectation error: " + e.err
 }
 
 func newDiscordExpectationError(err string) error {

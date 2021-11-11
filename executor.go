@@ -1,6 +1,7 @@
 package diskoi
 
 import (
+	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"golang.org/x/net/context"
@@ -47,30 +48,62 @@ func MustNewExecutor(name string, description string, fn interface{}) *Executor 
 	}
 	return executor
 }
-
-func (e *Executor) executor(d discordgo.ApplicationCommandInteractionData) (
-	*Executor,
-	Chain,
-	[]*discordgo.ApplicationCommandInteractionDataOption,
-	[]string,
-	error,
-) {
-	return e, Chain{}, d.Options, []string{e.name}, nil
+func (e *Executor) execute(s *discordgo.Session, i *discordgo.InteractionCreate, pre Chain) error {
+	id, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
+	if !ok {
+		return newDiscordExpectationError(
+			fmt.Sprintf(`given interaction data is not ApplicationCommandInteractionData in command group "%s"`, e.name))
+	}
+	return e.executeWithOpts(s, i, pre, id.Options, &MetaArgument{path: []string{e.name}})
 }
 
-func (e *Executor) executeMiddleware(request Request, chain Chain) error {
-	return chain.Extend(e.Chain()).Then(func(r Request) error {
-		values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, r.meta, context.Background(), r.ses, r.ic, r.opts)
+func (e *Executor) executeWithOpts(s *discordgo.Session, i *discordgo.InteractionCreate, pre Chain,
+	opts []*discordgo.ApplicationCommandInteractionDataOption, meta *MetaArgument) error {
+	req := Request{
+		ctx:  context.Background(),
+		ses:  s,
+		ic:   i,
+		opts: opts,
+		meta: meta,
+		exec: e,
+	}
+	err := pre.Extend(e.Chain()).Then(func(r Request) error {
+		values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, r.meta, r.ctx, r.ses, r.ic, r.opts)
 		if err != nil {
-			return fmt.Errorf(`error reconstructing command "%s": %w`, e.name, err)
+			return CommandParsingError{err: fmt.Errorf(`reconstructing command "%s": %w`, e.name, err)}
 		}
 		fn := reflect.ValueOf(e.fn)
-		fn.Call(values)
+		fn.Call(values) //todo accept errors to be returned, and wrap it with CommandExecutionError
 		return nil
-	})(request)
+	})(req)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, CommandParsingError{}):
+			fallthrough
+		case errors.Is(err, CommandExecutionError{}):
+			break
+		default:
+			return CommandMiddlewareExecutionError{
+				name: e.name,
+				err:  err,
+			}
+		}
+		return err
+	}
+	return nil
 }
 
-func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate,
+func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) ([]*discordgo.ApplicationCommandOptionChoice, error) {
+	id, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
+	if !ok {
+		return nil, newDiscordExpectationError(
+			fmt.Sprintf(`given interaction data is not ApplicationCommandInteractionData in command group "%s"`, e.name))
+	}
+	return e.autocompleteWithOps(s, i, id.Options, &MetaArgument{path: []string{e.name}})
+}
+
+func (e *Executor) autocompleteWithOps(s *discordgo.Session, i *discordgo.InteractionCreate,
 	opts []*discordgo.ApplicationCommandInteractionDataOption, meta *MetaArgument) ([]*discordgo.ApplicationCommandOptionChoice, error) {
 	arg, values, err := reconstructAutocompleteArgs(e.cmdArg, meta, s, i, opts)
 	if err != nil {

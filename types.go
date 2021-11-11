@@ -8,13 +8,8 @@ import (
 type Command interface {
 	Name() string
 	Description() string
-	executor(d discordgo.ApplicationCommandInteractionData) (
-		executor *Executor,
-		chain Chain,
-		options []*discordgo.ApplicationCommandInteractionDataOption,
-		path []string,
-		err error,
-	)
+	execute(s *discordgo.Session, i *discordgo.InteractionCreate, pre Chain) error
+	autocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) ([]*discordgo.ApplicationCommandOptionChoice, error)
 	applicationCommand() *discordgo.ApplicationCommand
 	lock()
 }
