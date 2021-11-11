@@ -1,7 +1,6 @@
 package diskoi
 
 import (
-	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"golang.org/x/net/context"
@@ -48,11 +47,12 @@ func MustNewExecutor(name string, description string, fn interface{}) *Executor 
 	}
 	return executor
 }
+
 func (e *Executor) execute(s *discordgo.Session, i *discordgo.InteractionCreate, pre Chain) error {
 	id, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
 	if !ok {
 		return newDiscordExpectationError(
-			fmt.Sprintf(`given interaction data is not ApplicationCommandInteractionData in command group "%s"`, e.name))
+			fmt.Sprintf(`given interaction data is not ApplicationCommandInteractionData in command group "/%s"`, e.name))
 	}
 	return e.executeWithOpts(s, i, pre, id.Options, &MetaArgument{path: []string{e.name}})
 }
@@ -70,22 +70,28 @@ func (e *Executor) executeWithOpts(s *discordgo.Session, i *discordgo.Interactio
 	err := pre.Extend(e.Chain()).Then(func(r Request) error {
 		values, err := reconstructFunctionArgs(e.fnArg, e.cmdArg, r.meta, r.ctx, r.ses, r.ic, r.opts)
 		if err != nil {
-			return CommandParsingError{err: fmt.Errorf(`reconstructing command "%s": %w`, e.name, err)}
+			return CommandParsingError{err: fmt.Errorf(`reconstructing command "%s": %w`, errPath(meta.Path()), err)}
 		}
 		fn := reflect.ValueOf(e.fn)
-		fn.Call(values) //todo accept errors to be returned, and wrap it with CommandExecutionError
+		returns := fn.Call(values)
+		if len(returns) > 0 {
+			if err, ok := returns[0].Interface().(error); ok {
+				return CommandExecutionError{
+					name: errPath(meta.path),
+					err:  err,
+				}
+			}
+		}
 		return nil
 	})(req)
 
 	if err != nil {
-		switch {
-		case errors.Is(err, CommandParsingError{}):
-			fallthrough
-		case errors.Is(err, CommandExecutionError{}):
-			break
-		default:
+		_, ok1 := err.(CommandParsingError)
+		_, ok2 := err.(CommandExecutionError)
+
+		if !ok1 && !ok2 {
 			return CommandMiddlewareExecutionError{
-				name: e.name,
+				name: errPath(meta.Path()),
 				err:  err,
 			}
 		}
@@ -98,7 +104,7 @@ func (e *Executor) autocomplete(s *discordgo.Session, i *discordgo.InteractionCr
 	id, ok := i.Data.(discordgo.ApplicationCommandInteractionData)
 	if !ok {
 		return nil, newDiscordExpectationError(
-			fmt.Sprintf(`given interaction data is not ApplicationCommandInteractionData in command group "%s"`, e.name))
+			fmt.Sprintf(`given interaction data is not ApplicationCommandInteractionData in command group "/%s"`, e.name))
 	}
 	return e.autocompleteWithOps(s, i, id.Options, &MetaArgument{path: []string{e.name}})
 }
@@ -107,7 +113,7 @@ func (e *Executor) autocompleteWithOps(s *discordgo.Session, i *discordgo.Intera
 	opts []*discordgo.ApplicationCommandInteractionDataOption, meta *MetaArgument) ([]*discordgo.ApplicationCommandOptionChoice, error) {
 	arg, values, err := reconstructAutocompleteArgs(e.cmdArg, meta, s, i, opts)
 	if err != nil {
-		return nil, fmt.Errorf(`error autocompleting command "%s": %w`, e.name, err)
+		return nil, fmt.Errorf(`error autocompleting command "%s": %w`, errPath(meta.Path()), err)
 	}
 	rets := reflect.ValueOf(arg.autocompleteFn).Call(values)
 	optChoice := rets[0].Interface().([]*discordgo.ApplicationCommandOptionChoice)

@@ -22,7 +22,8 @@ func TestAnalyzeCmdFn(t *testing.T) {
 	}{
 		{
 			name: "process",
-			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h interaction.Interaction, et EmbeddableTest) {
+			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h interaction.Interaction, et EmbeddableTest) error {
+				return nil
 			},
 			wantType: reflect.TypeOf(EmbeddableTest{}),
 			wantFnArgs: []fnArgument{{typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction},
@@ -109,9 +110,13 @@ func TestAnalyzeCmdFn(t *testing.T) {
 			fn:      "foo",
 			wantErr: regexp.MustCompile("^given type .*?\\) is not type of func"),
 		}, {
-			name:    "err unexpected output",
+			name:    "err unexpected output count",
+			fn:      func() (string, string) { return "", "" },
+			wantErr: regexp.MustCompile("^given function.*?\\) has .*? outputs, expecting"),
+		}, {
+			name:    "err unexpected output type",
 			fn:      func() string { return "" },
-			wantErr: regexp.MustCompile("^given function.*?\\) has .*? outputs, expecting 0"),
+			wantErr: regexp.MustCompile("^given function.*?\\) outputs \".*?\".*?\\), expecting error"),
 		}, {
 			name:    "err in analyzing fn",
 			fn:      func(fail complex64) {},

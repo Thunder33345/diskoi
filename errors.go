@@ -25,7 +25,7 @@ type CommandExecutionError struct {
 }
 
 func (e CommandExecutionError) Error() string {
-	return fmt.Sprintf(`error executing command for "%s": %v`, e.name, e.err)
+	return fmt.Sprintf(`executing command "%s": %v`, e.name, e.err)
 }
 
 func (e CommandExecutionError) Unwrap() error {
@@ -39,7 +39,7 @@ type CommandMiddlewareExecutionError struct {
 }
 
 func (e CommandMiddlewareExecutionError) Error() string {
-	return fmt.Sprintf(`error executing command middleware for "%s": %v`, e.name, e.err)
+	return fmt.Sprintf(`executing command middleware "%s": %v`, e.name, e.err)
 }
 
 func (e CommandMiddlewareExecutionError) Unwrap() error {
@@ -53,7 +53,7 @@ type AutocompleteExecutionError struct {
 }
 
 func (e AutocompleteExecutionError) Error() string {
-	return fmt.Sprintf(`error executing autocomplete for "%s": %v`, e.name, e.err)
+	return fmt.Sprintf(`executing autocomplete "%s": %v`, e.name, e.err)
 }
 
 func (e AutocompleteExecutionError) Unwrap() error {

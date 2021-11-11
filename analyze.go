@@ -20,6 +20,7 @@ var (
 	rTypeIUnmarshal      = reflect.TypeOf((*Unmarshal)(nil)).Elem()
 	rTypeIChannelType    = reflect.TypeOf((*ChannelType)(nil)).Elem()
 	rTypeICommandOptions = reflect.TypeOf((*CommandOptions)(nil)).Elem()
+	rTypeIError          = reflect.TypeOf((*error)(nil)).Elem()
 )
 
 const applicationCommandOptionDouble = 10 //type doubles fixme get constant from discord go
@@ -32,9 +33,17 @@ func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*commandArgume
 	if typ.Kind() != reflect.Func {
 		return nil, nil, nil, fmt.Errorf("given type %s(%s) is not type of func", typ.String(), typ.Kind().String())
 	}
-	if typ.NumOut() != 0 {
-		return nil, nil, nil, fmt.Errorf("given function(%s) has %d outputs, expecting 0", signature(fn), typ.NumOut())
+
+	if typ.NumOut() > 0 {
+		if typ.NumOut() > 1 {
+			return nil, nil, nil, fmt.Errorf("given function(%s) has %d outputs, expecting 0 or 1", signature(fn), typ.NumOut())
+		}
+		typOut := typ.Out(0)
+		if !typOut.Implements(rTypeIError) {
+			return nil, nil, nil, fmt.Errorf(`given function(%s) outputs "%s"(%s), expecting error`, signature(fn), typOut.String(), typOut.Kind().String())
+		}
 	}
+
 	fnArgs, err := analyzeFunctionArgument(reflect.TypeOf(fn), nil)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("analyzing function: %w", err)
@@ -53,7 +62,7 @@ func analyzeCmdFn(fn interface{}) ([]*fnArgument, reflect.Type, []*commandArgume
 	return fnArgs, cmdStruct, cmdArg, nil
 }
 
-//analyzeCmdFn analyzes a given function, insure it matches expected function signatures for an autocomplete function
+//analyzeAutocompleteFunction analyzes a given function, insure it matches expected function signatures for an autocomplete function
 //it also takes in an expected data type of the main executor
 //it returns analyzeFunctionArgument which returns a list of function arguments
 //it does not process the data struct as it can reuse the same analyzed data for the command struct

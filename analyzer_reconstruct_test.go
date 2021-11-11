@@ -77,7 +77,7 @@ func TestReconstructCommandArgument(t *testing.T) {
 					Value: 100,
 				},
 			},
-			wantErr: regexp.MustCompile(`^option type mismatch in ".*?": we expect it to be ".*?"`),
+			wantErr: regexp.MustCompile(`option type mismatch in ".*?": we expect it to be ".*?"`),
 		}, {
 			name:      "err unrecognized type",
 			cmdStruct: reflect.TypeOf(Reconstruct1{}),
@@ -94,7 +94,7 @@ func TestReconstructCommandArgument(t *testing.T) {
 				cType:      255,
 				Name:       "string",
 			}},
-			wantErr: regexp.MustCompile(`^unrecognized ApplicationCommandOptionType`),
+			wantErr: regexp.MustCompile(`unrecognized ApplicationCommandOptionType`),
 		},
 	}
 	for _, tc := range cases {
