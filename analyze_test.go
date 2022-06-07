@@ -5,11 +5,18 @@ import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/require"
-	"github.com/thunder33345/diskoi/interaction"
 	"reflect"
 	"regexp"
 	"testing"
 )
+
+type customUnmarshall struct {
+}
+
+func (m *customUnmarshall) UnmarshalDiskoi(_ *discordgo.Session, _ *discordgo.InteractionCreate,
+	_ []*discordgo.ApplicationCommandInteractionDataOption) error {
+	return nil
+}
 
 func TestAnalyzeCmdFn(t *testing.T) {
 	cases := []struct {
@@ -22,14 +29,14 @@ func TestAnalyzeCmdFn(t *testing.T) {
 	}{
 		{
 			name: "process",
-			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h interaction.Interaction, et EmbeddableTest) error {
+			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h customUnmarshall, et EmbeddableTest) error {
 				return nil
 			},
 			wantType: reflect.TypeOf(EmbeddableTest{}),
 			wantFnArgs: []fnArgument{{typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction},
 				{
 					typ:        fnArgumentTypeMarshal,
-					reflectTyp: reflect.TypeOf(interaction.Interaction{}),
+					reflectTyp: reflect.TypeOf(customUnmarshall{}),
 				},
 				{
 					typ:        fnArgumentTypeData,
@@ -65,13 +72,13 @@ func TestAnalyzeCmdFn(t *testing.T) {
 			},
 		}, {
 			name: "process ptr",
-			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h interaction.Interaction, et *EmbeddableTest) {
+			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h customUnmarshall, et *EmbeddableTest) {
 			},
 			wantType: reflect.TypeOf(EmbeddableTest{}),
 			wantFnArgs: []fnArgument{{typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction},
 				{
 					typ:        fnArgumentTypeMarshal,
-					reflectTyp: reflect.TypeOf(interaction.Interaction{}),
+					reflectTyp: reflect.TypeOf(customUnmarshall{}),
 				},
 				{
 					typ:        fnArgumentTypeData,
@@ -172,7 +179,7 @@ func TestAnalyzeAutocompleteFunction(t *testing.T) {
 	}{
 		{
 			name: "simple",
-			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h interaction.Interaction, e Embeddable1,
+			fn: func(s *discordgo.Session, i *discordgo.InteractionCreate, h customUnmarshall, e Embeddable1,
 			) []*discordgo.ApplicationCommandOptionChoice {
 				panic("this should not be called")
 			},
@@ -180,7 +187,7 @@ func TestAnalyzeAutocompleteFunction(t *testing.T) {
 			wantArg: []fnArgument{{typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction},
 				{
 					typ:        fnArgumentTypeMarshal,
-					reflectTyp: reflect.TypeOf(interaction.Interaction{}),
+					reflectTyp: reflect.TypeOf(customUnmarshall{}),
 				},
 				{
 					typ:        fnArgumentTypeData,
@@ -236,13 +243,13 @@ func TestAnalyzeFunctionArgument(t *testing.T) {
 	}{
 		{
 			name: "simple",
-			fn: reflect.TypeOf(func(s *discordgo.Session, i *discordgo.InteractionCreate, h interaction.Interaction, e Embeddable1) {
+			fn: reflect.TypeOf(func(s *discordgo.Session, i *discordgo.InteractionCreate, h customUnmarshall, e Embeddable1) {
 			}),
 			expected: reflect.TypeOf(Embeddable1{}),
 			wantArg: []fnArgument{{typ: fnArgumentTypeSession}, {typ: fnArgumentTypeInteraction},
 				{
 					typ:        fnArgumentTypeMarshal,
-					reflectTyp: reflect.TypeOf(interaction.Interaction{}),
+					reflectTyp: reflect.TypeOf(customUnmarshall{}),
 				},
 				{
 					typ:        fnArgumentTypeData,
@@ -281,13 +288,13 @@ func TestAnalyzeFunctionArgument(t *testing.T) {
 			},
 		}, {
 			name: "ptr marshal",
-			fn: reflect.TypeOf(func(h *interaction.Interaction, e *Embeddable1) {
+			fn: reflect.TypeOf(func(h *customUnmarshall, e *Embeddable1) {
 			}),
 			expected: reflect.TypeOf(Embeddable1{}),
 			wantArg: []fnArgument{
 				{
 					typ:        fnArgumentTypeMarshalPtr,
-					reflectTyp: reflect.TypeOf(interaction.Interaction{}),
+					reflectTyp: reflect.TypeOf(customUnmarshall{}),
 				},
 				{
 					typ:        fnArgumentTypeData,
